@@ -1,1 +1,32 @@
-{\n  "name": "dispatch-poc",\n  "version": "1.0.0",\n  "private": true,\n  "scripts": {\n    "dev": "next dev",\n    "build": "next build",\n    "start": "next start"\n  },\n  "dependencies": {\n    "next": "^14.0.0",\n    "react": "^18.0.0",\n    "react-dom": "^18.0.0",\n    "@dnd-kit/core": "^8.0.0",\n    "@dnd-kit/sortable": "^8.0.0",\n    "reactflow": "^10.0.0",\n    "zustand": "^4.0.0",\n    "tailwindcss": "^3.0.0",\n    "postcss": "^8.0.0",\n    "autoprefixer": "^10.0.0"\n  },\n  "devDependencies": {\n    "typescript": "^5.0.0"\n  }\n}
+{
+  "name": "dispatch-poc",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^8.0.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "autoprefixer": "^10.0.0",
+    "next": "^14.0.0",
+    "postcss": "^8.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "reactflow": "^11.11.4",
+    "tailwindcss": "^3.0.0",
+    "zustand": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.0.0",
+    "typescript": "^5.0.0"
+  }
+}
