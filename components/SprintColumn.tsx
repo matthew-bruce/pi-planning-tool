@@ -10,6 +10,7 @@ export function SprintColumn({ sprint, features }: { sprint: Sprint; features: F
   const { setNodeRef } = useDroppable({ id: sprint.id });
   return (
     <div ref={setNodeRef} className="min-w-64 bg-gray-50 border border-gray-200 rounded p-2">
+      <h4 className="font-semibold">{sprint.name ?? `Sprint ${sprint.number}`}</h4>
       <h4 className="font-semibold">Sprint {sprint.number}</h4>
       <p className="text-xs text-gray-500 mb-2">{formatSprintRange(sprint.startDate, sprint.endDate)}</p>
       <SortableContext items={features.map((f) => f.id)} strategy={verticalListSortingStrategy}>

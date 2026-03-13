@@ -6,6 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^8.0.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "autoprefixer": "^10.0.0",
+    "next": "^14.0.0",
+    "postcss": "^8.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "reactflow": "^11.11.4",
+    "tailwindcss": "^3.0.0",
+    "zustand": "^4.0.0",
+    "@supabase/supabase-js": "^2.49.1"
     "lint": "next lint"
   },
   "dependencies": {
@@ -27,6 +43,8 @@
     "@types/react-dom": "^18.2.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.8"
     "typescript": "^5.0.0"
   }
 }

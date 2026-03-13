@@ -15,6 +15,7 @@ type DispatchState = DispatchData & {
   density: ViewDensity;
   hydrateSeed: () => void;
   setSelectedArtId: (artId: string) => void;
+  setArts: (arts: DispatchData['arts']) => void;
   setDemoMode: (enabled: boolean) => void;
   setDensity: (density: ViewDensity) => void;
   assignFeatureSprint: (featureId: string, sprintId: string | null) => void;
@@ -35,6 +36,11 @@ export const useDispatchStore = create<DispatchState>()(
       density: 'compact',
       hydrateSeed: () => set((state) => (state.features.length ? state : { ...seeded })),
       setSelectedArtId: (selectedArtId) => set({ selectedArtId }),
+      setArts: (arts) =>
+        set((state) => ({
+          arts,
+          selectedArtId: arts.some((art) => art.id === state.selectedArtId) ? state.selectedArtId : arts[0]?.id ?? '',
+        })),
       setDemoMode: (demoMode) => set({ demoMode }),
       setDensity: (density) => set({ density }),
       assignFeatureSprint: (featureId, sprintId) =>

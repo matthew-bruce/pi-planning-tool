@@ -7,6 +7,7 @@ export type Team = { id: string; platform: string; name: string };
 export type Sprint = {
   id: string;
   number: number;
+  name?: string;
   startDate: string;
   endDate: string;
 };
@@ -24,6 +25,9 @@ export type Feature = {
   initiativeId: string;
   teamId: string;
   sprintId: string | null;
+  sourceUrl?: string | null;
+  commitmentStatus?: string | null;
+  status?: string | null;
   storyCount: number;
   dependencyCounts: DependencyCounts;
 };

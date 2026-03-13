@@ -16,6 +16,7 @@ Dispatch is a **stubbed orchestration + observability layer** for PI Planning. I
 - `/dashboard` – KPIs, ART tiles, sprint distribution, activity feed
 - `/triage` – full-screen bulk triage for unallocated features
 - `/help` – static guide and FAQ
+- `/admin` – Dispatch Admin Control Centre for cycle/platform/ART/team/initiative management and CSV import/sync
 
 ## Run locally
 1. Install dependencies
@@ -48,3 +49,10 @@ Dispatch is a **stubbed orchestration + observability layer** for PI Planning. I
 2. Provide initial data mapping into canonical domain model (`Art`, `Initiative`, `Team`, `Sprint`, `Feature`, `Dependency`).
 3. Switch provider selection in `store/useDispatchStore.ts` (or add runtime provider selector).
 4. Keep UI unchanged; screens already depend on canonical store/provider state.
+
+## Admin Control Centre (`/admin`)
+- Tabbed admin workspace for Planning Cycles, Platforms, ARTs, Teams, Initiatives, and Import/Sync.
+- Planning cycle creation supports sprint auto-generation preview (with editable dates) before save confirmation.
+- Team tab includes planning-cycle participation toggles persisted in `team_cycle_participation`.
+- Import/Sync tab includes CSV upload, mapping, validation, snapshot ingest, import history, and rollback latest import.
+- Rollback marks latest imported snapshot as `rolled_back` then triggers a live-table rebuild helper from remaining imported snapshots.

@@ -12,6 +12,7 @@ const navItems = [
   { href: '/dashboard', label: 'Live Dashboard' },
   { href: '/triage', label: 'Bulk Triage' },
   { href: '/help', label: 'Help' },
+  { href: '/admin', label: 'Admin Control Centre' },
 ];
 
 export function DispatchShell({ children }: { children: React.ReactNode }) {
