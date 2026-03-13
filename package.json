@@ -10,24 +10,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@dnd-kit/core": "^8.0.0",
-    "@dnd-kit/sortable": "^8.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "autoprefixer": "^10.0.0",
-    "next": "^14.0.0",
-    "postcss": "^8.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "reactflow": "^11.11.4",
-    "tailwindcss": "^3.0.0",
-    "zustand": "^4.0.0",
-    "@supabase/supabase-js": "^2.49.1"
-    "lint": "next lint"
-  },
-  "dependencies": {
     "@dnd-kit/core": "^5.0.2",
     "@dnd-kit/sortable": "^6.0.1",
     "@dnd-kit/utilities": "^3.2.2",
+    "@supabase/supabase-js": "^2.49.1",
     "autoprefixer": "^10.4.16",
     "next": "^14.0.0",
     "postcss": "^8.4.33",
@@ -45,6 +31,5 @@
     "eslint-config-next": "^14.0.0",
     "typescript": "^5.0.0",
     "vitest": "^2.1.8"
-    "typescript": "^5.0.0"
   }
 }
