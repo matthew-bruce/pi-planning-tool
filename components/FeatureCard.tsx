@@ -21,6 +21,7 @@ export function FeatureCard({ feature }: { feature: Feature }) {
       className="rounded border border-gray-300 bg-white p-2 shadow-sm mb-2 text-xs cursor-grab"
     >
       <a href={feature.sourceUrl ?? `https://placeholder.local/${feature.ticketKey}`} target="_blank" rel="noreferrer" className="font-semibold text-royalRed underline">
+      <a href={`https://placeholder.local/${feature.ticketKey}`} target="_blank" rel="noreferrer" className="font-semibold text-royalRed underline">
         {feature.ticketKey}
       </a>
       <p className="text-gray-800">{feature.title}</p>
