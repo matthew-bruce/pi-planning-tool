@@ -41,8 +41,16 @@ export async function createPlanningCycleWithSprints(payload: {
     .single();
 
   if (cycleError || !cycleData) {
-    return { error: cycleError?.message ?? 'Could not create planning cycle.' };
+  if (cycleError?.message?.includes('planning_cycles_name_key')) {
+    return {
+      error: `A planning cycle already exists with the name "${payload.cycle.name}". Each cycle must have a unique name. We recommend using a naming convention such as FY26 Q1, FY26 Q2, etc.`,
+    };
   }
+
+  return {
+    error: cycleError?.message ?? 'Could not create planning cycle.',
+  };
+}
 
   const { error: sprintError } = await supabase.from('sprints').insert(
     payload.sprints.map((sprint) => ({
