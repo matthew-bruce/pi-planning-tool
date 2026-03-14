@@ -46,7 +46,10 @@ type DbTeam = {
   name: string;
   platform_id: string | null;
   is_active: boolean;
-  platforms?: { id: string; name: string } | null;
+  platforms?: Array<{
+    id: string;
+    name: string;
+  }> | null;
 };
 
 type DbStoryCount = { feature_id: string | null };
