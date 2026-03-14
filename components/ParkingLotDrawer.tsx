@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Feature } from '@/lib/models';
+import type { Feature } from '@/lib/models';
 import { FeatureCard } from '@/components/FeatureCard';
 
 export function ParkingLotDrawer({ features }: { features: Feature[] }) {
