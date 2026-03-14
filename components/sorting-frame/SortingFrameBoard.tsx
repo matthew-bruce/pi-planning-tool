@@ -94,10 +94,7 @@ export function SortingFrameBoard({ initialData }: Props) {
           }))
           .filter((team) => team.features.length > 0);
 
-        const featuresCount = teams.reduce(
-          (sum, team) => sum + team.features.length,
-          0
-        );
+        const featuresCount = teams.reduce((sum, team) => sum + team.features.length, 0);
 
         const dependencyCount = teams.reduce(
           (sum, team) =>
@@ -117,8 +114,7 @@ export function SortingFrameBoard({ initialData }: Props) {
           (sum, team) =>
             sum +
             team.features.reduce(
-              (featureSum, feature) =>
-                featureSum + feature.dependencyCounts.conflict,
+              (featureSum, feature) => featureSum + feature.dependencyCounts.conflict,
               0
             ),
           0
@@ -154,6 +150,13 @@ export function SortingFrameBoard({ initialData }: Props) {
       return team?.platform === platformFilter;
     });
   }, [data.initiatives, data.parkingLot, platformFilter, search]);
+
+  const emptyBoardColumns = useMemo(() => {
+    return data.sprints.map((sprint) => ({
+      ...sprint,
+      features: [],
+    }));
+  }, [data.sprints]);
 
   const onDragEnd = (event: DragEndEvent) => {
     const featureId = String(event.active.id);
@@ -221,9 +224,35 @@ export function SortingFrameBoard({ initialData }: Props) {
       <div className="flex">
         <div className="flex-1 space-y-4 overflow-x-auto pr-3">
           {!filteredInitiatives.length ? (
-            <div className="rounded border border-gray-200 bg-gray-50 p-4 text-sm">
-              No initiatives or features for the selected ART.
-            </div>
+            <section className="rounded border border-gray-200 bg-white">
+              <div className="border-b border-gray-200 bg-gray-50 p-3">
+                <div className="font-semibold text-gray-800">
+                  Empty planning canvas
+                </div>
+                <div className="mt-1 text-sm text-gray-600">
+                  This cycle has sprint structure configured, but there are no
+                  initiatives, teams, or imported planning items yet for the
+                  selected ART.
+                </div>
+              </div>
+
+              <div className="p-3">
+                <div className="mb-3 text-xs text-gray-500">
+                  You can still review the sprint layout for {data.cycle.name}.
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {emptyBoardColumns.map((sprint) => (
+                    <div key={sprint.id} className="min-w-64">
+                      <SprintColumn sprint={sprint} features={[]} />
+                      <div className="mt-2 rounded border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+                        No planned features
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           ) : (
             filteredInitiatives.map((initiative) => {
               const collapsed = collapsedInitiatives[initiative.id];
