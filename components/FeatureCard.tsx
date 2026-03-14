@@ -20,6 +20,11 @@ export function FeatureCard({ feature }: FeatureCardProps) {
     transition,
   };
 
+  const dependencyCount =
+    (feature.dependencyCounts?.requires ?? 0) +
+    (feature.dependencyCounts?.blocks ?? 0) +
+    (feature.dependencyCounts?.conflict ?? 0);
+
   return (
     <div
       ref={setNodeRef}
@@ -54,9 +59,9 @@ export function FeatureCard({ feature }: FeatureCardProps) {
           </span>
         )}
 
-        {typeof feature.dependencyCount === 'number' && (
+        {dependencyCount > 0 && (
           <span className="rounded bg-gray-100 px-2 py-1">
-            🔗 {feature.dependencyCount}
+            🔗 {dependencyCount}
           </span>
         )}
 
