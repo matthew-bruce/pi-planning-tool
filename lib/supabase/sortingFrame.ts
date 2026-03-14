@@ -1,4 +1,4 @@
-import { Feature } from '@/lib/models';
+import type { Feature } from '@/lib/models';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 type DbCycle = {
@@ -18,7 +18,11 @@ type DbSprint = {
   end_date: string;
 };
 
-type DbArt = { id: string; name: string; is_active: boolean };
+type DbArt = {
+  id: string;
+  name: string;
+  is_active: boolean;
+};
 
 type DbInitiative = {
   id: string;
@@ -52,7 +56,9 @@ type DbTeam = {
   }> | null;
 };
 
-type DbStoryCount = { feature_id: string | null };
+type DbStoryCount = {
+  feature_id: string | null;
+};
 
 type DbDependency = {
   id: string;
@@ -85,7 +91,13 @@ export type SortingFrameInitiativeGroup = {
 export type SortingFrameData = {
   selectedCycleId?: string;
   cycle: DbCycle | null;
-  sprints: Array<{ id: string; number: number; name: string; startDate: string; endDate: string }>;
+  sprints: Array<{
+    id: string;
+    number: number;
+    name: string;
+    startDate: string;
+    endDate: string;
+  }>;
   arts: Array<{ id: string; name: string }>;
   selectedArtId: string | null;
   initiatives: SortingFrameInitiativeGroup[];
@@ -93,43 +105,71 @@ export type SortingFrameData = {
   availablePlatforms: string[];
 };
 
-export async function getActiveOrSelectedPlanningCycle(selectedCycleId?: string): Promise<DbCycle | null> {
+export async function getActiveOrSelectedPlanningCycle(
+  selectedCycleId?: string
+): Promise<DbCycle | null> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return null;
 
   if (selectedCycleId) {
-    const { data } = await supabase.from('planning_cycles').select('*').eq('id', selectedCycleId).maybeSingle();
+    const { data } = await supabase
+      .from('planning_cycles')
+      .select('*')
+      .eq('id', selectedCycleId)
+      .maybeSingle();
+
     if (data) return data as DbCycle;
   }
 
-  const { data: active } = await supabase.from('planning_cycles').select('*').eq('is_active', true).order('start_date', { ascending: false }).limit(1).maybeSingle();
+  const { data: active } = await supabase
+    .from('planning_cycles')
+    .select('*')
+    .eq('is_active', true)
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   if (active) return active as DbCycle;
 
-  const { data: latest } = await supabase.from('planning_cycles').select('*').order('start_date', { ascending: false }).limit(1).maybeSingle();
+  const { data: latest } = await supabase
+    .from('planning_cycles')
+    .select('*')
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return (latest as DbCycle | null) ?? null;
 }
 
 export async function getCycleSprints(cycleId: string): Promise<DbSprint[]> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return [];
+
   const { data } = await supabase
     .from('sprints')
     .select('*')
     .eq('planning_cycle_id', cycleId)
     .order('sprint_number', { ascending: true });
+
   return (data ?? []) as DbSprint[];
 }
 
-export async function getArts() {
+export async function getArts(): Promise<DbArt[]> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return [] as DbArt[];
-  const { data } = await supabase.from('arts').select('*').eq('is_active', true).order('name');
+
+  const { data } = await supabase
+    .from('arts')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+
   return (data ?? []) as DbArt[];
 }
 
-export async function getInitiativesForArt(cycleId: string, artId: string): Promise<DbInitiative[]> {
+export async function getInitiativesForArt(
+  cycleId: string,
+  artId: string
+): Promise<DbInitiative[]> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return [];
+
   const { data } = await supabase
     .from('initiatives')
     .select('*')
@@ -141,13 +181,17 @@ export async function getInitiativesForArt(cycleId: string, artId: string): Prom
   return (data ?? []) as DbInitiative[];
 }
 
-export async function getFeaturesForSortingFrame(cycleId: string, artId: string): Promise<DbFeature[]> {
+export async function getFeaturesForSortingFrame(
+  cycleId: string,
+  artId: string
+): Promise<DbFeature[]> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return [];
 
   const { data } = await supabase
     .from('features')
-    .select('id, planning_cycle_id, initiative_id, team_id, sprint_id, ticket_key, title, source_url, commitment_status, status, initiatives!inner(art_id)')
+    .select(
+      'id, planning_cycle_id, initiative_id, team_id, sprint_id, ticket_key, title, source_url, commitment_status, status, initiatives!inner(art_id)'
+    )
     .eq('planning_cycle_id', cycleId)
     .eq('initiatives.art_id', artId)
     .returns<Array<DbFeature & { initiatives: { art_id: string } }>>();
@@ -157,7 +201,8 @@ export async function getFeaturesForSortingFrame(cycleId: string, artId: string)
 
 export async function getTeamsByIds(teamIds: string[]): Promise<DbTeam[]> {
   const supabase = getSupabaseServerClient();
-  if (!supabase || !teamIds.length) return [];
+
+  if (!teamIds.length) return [];
 
   const { data } = await supabase
     .from('teams')
@@ -165,12 +210,13 @@ export async function getTeamsByIds(teamIds: string[]): Promise<DbTeam[]> {
     .in('id', teamIds)
     .order('name');
 
-  return (data ?? []) as DbTeam[];
+  return (data ?? []) as unknown as DbTeam[];
 }
 
-export async function getStoryCountsByFeature(cycleId: string): Promise<Map<string, number>> {
+export async function getStoryCountsByFeature(
+  cycleId: string
+): Promise<Map<string, number>> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return new Map();
 
   const { data } = await supabase
     .from('stories')
@@ -179,31 +225,49 @@ export async function getStoryCountsByFeature(cycleId: string): Promise<Map<stri
     .not('feature_id', 'is', null);
 
   const counts = new Map<string, number>();
+
   ((data ?? []) as DbStoryCount[]).forEach((row) => {
     if (!row.feature_id) return;
     counts.set(row.feature_id, (counts.get(row.feature_id) ?? 0) + 1);
   });
+
   return counts;
 }
 
-export async function getDependenciesByFeature(cycleId: string): Promise<Map<string, { requires: number; blocks: number; conflict: number }>> {
+export async function getDependenciesByFeature(
+  cycleId: string
+): Promise<Map<string, { requires: number; blocks: number; conflict: number }>> {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return new Map();
 
   const { data } = await supabase
     .from('dependencies')
     .select('id, source_feature_id, target_feature_id, dependency_type')
     .eq('planning_cycle_id', cycleId);
 
-  const map = new Map<string, { requires: number; blocks: number; conflict: number }>();
+  const map = new Map<
+    string,
+    { requires: number; blocks: number; conflict: number }
+  >();
+
   ((data ?? []) as DbDependency[]).forEach((dependency) => {
     const type = (dependency.dependency_type ?? '').toLowerCase();
+
     const normalized: 'requires' | 'blocks' | 'conflict' =
-      type === 'blocks' ? 'blocks' : type === 'conflict' ? 'conflict' : 'requires';
+      type === 'blocks'
+        ? 'blocks'
+        : type === 'conflict'
+          ? 'conflict'
+          : 'requires';
 
     const apply = (featureId: string | null) => {
       if (!featureId) return;
-      const current = map.get(featureId) ?? { requires: 0, blocks: 0, conflict: 0 };
+
+      const current = map.get(featureId) ?? {
+        requires: 0,
+        blocks: 0,
+        conflict: 0,
+      };
+
       current[normalized] += 1;
       map.set(featureId, current);
     };
@@ -215,12 +279,20 @@ export async function getDependenciesByFeature(cycleId: string): Promise<Map<str
   return map;
 }
 
-export async function getSortingFrameData(input: { selectedCycleId?: string; selectedArtId?: string }): Promise<SortingFrameData> {
+export async function getSortingFrameData(input: {
+  selectedCycleId?: string;
+  selectedArtId?: string;
+}): Promise<SortingFrameData> {
   const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
-  const arts = (await getArts()).map((art) => ({ id: art.id, name: art.name }));
-  const selectedArtId = input.selectedArtId && arts.some((art) => art.id === input.selectedArtId)
-    ? input.selectedArtId
-    : arts[0]?.id ?? null;
+  const arts = (await getArts()).map((art) => ({
+    id: art.id,
+    name: art.name,
+  }));
+
+  const selectedArtId =
+    input.selectedArtId && arts.some((art) => art.id === input.selectedArtId)
+      ? input.selectedArtId
+      : arts[0]?.id ?? null;
 
   if (!cycle || !selectedArtId) {
     return {
@@ -235,13 +307,14 @@ export async function getSortingFrameData(input: { selectedCycleId?: string; sel
     };
   }
 
-  const [sprints, initiatives, rawFeatures, storyCounts, dependencyCounts] = await Promise.all([
-    getCycleSprints(cycle.id),
-    getInitiativesForArt(cycle.id, selectedArtId),
-    getFeaturesForSortingFrame(cycle.id, selectedArtId),
-    getStoryCountsByFeature(cycle.id),
-    getDependenciesByFeature(cycle.id),
-  ]);
+  const [sprints, initiatives, rawFeatures, storyCounts, dependencyCounts] =
+    await Promise.all([
+      getCycleSprints(cycle.id),
+      getInitiativesForArt(cycle.id, selectedArtId),
+      getFeaturesForSortingFrame(cycle.id, selectedArtId),
+      getStoryCountsByFeature(cycle.id),
+      getDependenciesByFeature(cycle.id),
+    ]);
 
   const features: Feature[] = rawFeatures.map((feature) => ({
     id: feature.id,
@@ -254,52 +327,81 @@ export async function getSortingFrameData(input: { selectedCycleId?: string; sel
     commitmentStatus: feature.commitment_status,
     status: feature.status,
     storyCount: storyCounts.get(feature.id) ?? 0,
-    dependencyCounts: dependencyCounts.get(feature.id) ?? { requires: 0, blocks: 0, conflict: 0 },
+    dependencyCounts: dependencyCounts.get(feature.id) ?? {
+      requires: 0,
+      blocks: 0,
+      conflict: 0,
+    },
   }));
 
-  const teamIds = [...new Set(features.map((feature) => feature.teamId).filter((id) => id !== 'unknown-team'))];
+  const teamIds = [
+    ...new Set(
+      features
+        .map((feature) => feature.teamId)
+        .filter((id) => id !== 'unknown-team')
+    ),
+  ];
+
   const teams = await getTeamsByIds(teamIds);
   const teamById = new Map(teams.map((team) => [team.id, team]));
-
   const platformSet = new Set<string>();
 
-  const initiativesVm: SortingFrameInitiativeGroup[] = initiatives.map((initiative) => {
-    const initiativeFeatures = features.filter((feature) => feature.initiativeId === initiative.id);
-    const teamMap = new Map<string, Feature[]>();
+  const initiativesVm: SortingFrameInitiativeGroup[] = initiatives.map(
+    (initiative) => {
+      const initiativeFeatures = features.filter(
+        (feature) => feature.initiativeId === initiative.id
+      );
 
-    initiativeFeatures.forEach((feature) => {
-      if (!teamMap.has(feature.teamId)) teamMap.set(feature.teamId, []);
-      teamMap.get(feature.teamId)?.push(feature);
-    });
+      const teamMap = new Map<string, Feature[]>();
 
-    const lanes: SortingFrameTeamLane[] = [...teamMap.entries()]
-      .map(([teamId, laneFeatures]) => {
-        const team = teamById.get(teamId);
-        if (!team) return null;
-        const platform = team.platforms?.name ?? 'Unknown';
-        platformSet.add(platform);
-        return {
-          id: team.id,
-          name: team.name,
-          platform,
-          features: laneFeatures,
-        };
-      })
-      .filter((lane): lane is SortingFrameTeamLane => lane !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      initiativeFeatures.forEach((feature) => {
+        if (!teamMap.has(feature.teamId)) {
+          teamMap.set(feature.teamId, []);
+        }
+        teamMap.get(feature.teamId)?.push(feature);
+      });
 
-    return {
-      id: initiative.id,
-      name: initiative.name,
-      summary: {
-        teamsCount: lanes.length,
-        featuresCount: initiativeFeatures.length,
-        dependencyCount: initiativeFeatures.reduce((sum, feature) => sum + feature.dependencyCounts.requires + feature.dependencyCounts.blocks + feature.dependencyCounts.conflict, 0),
-        conflictCount: initiativeFeatures.reduce((sum, feature) => sum + feature.dependencyCounts.conflict, 0),
-      },
-      teams: lanes,
-    };
-  });
+      const lanes: SortingFrameTeamLane[] = [...teamMap.entries()]
+        .map(([teamId, laneFeatures]) => {
+          const team = teamById.get(teamId);
+          if (!team) return null;
+
+          const platform = team.platforms?.[0]?.name ?? 'Unknown';
+          platformSet.add(platform);
+
+          return {
+            id: team.id,
+            name: team.name,
+            platform,
+            features: laneFeatures,
+          };
+        })
+        .filter((lane): lane is SortingFrameTeamLane => lane !== null)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      return {
+        id: initiative.id,
+        name: initiative.name,
+        summary: {
+          teamsCount: lanes.length,
+          featuresCount: initiativeFeatures.length,
+          dependencyCount: initiativeFeatures.reduce(
+            (sum, feature) =>
+              sum +
+              feature.dependencyCounts.requires +
+              feature.dependencyCounts.blocks +
+              feature.dependencyCounts.conflict,
+            0
+          ),
+          conflictCount: initiativeFeatures.reduce(
+            (sum, feature) => sum + feature.dependencyCounts.conflict,
+            0
+          ),
+        },
+        teams: lanes,
+      };
+    }
+  );
 
   const parkingLot = features.filter((feature) => feature.sprintId === null);
 
