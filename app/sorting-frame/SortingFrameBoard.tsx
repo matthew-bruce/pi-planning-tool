@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -32,7 +32,6 @@ export function SortingFrameBoard({
     features,
     sprints,
     assignFeatureSprint,
-    hydrateFromSortingFrameData,
   } = useDispatchStore();
 
   const [platformFilter, setPlatformFilter] = useState('ALL');
@@ -40,17 +39,11 @@ export function SortingFrameBoard({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const sensors = useSensors(useSensor(PointerSensor));
 
-  useEffect(() => {
-    if (hydrateFromSortingFrameData) {
-      hydrateFromSortingFrameData(initialData);
-    }
-  }, [initialData, hydrateFromSortingFrameData]);
-
   const activeArtId = selectedArtId ?? initialData.selectedArtId ?? null;
-  const safeInitiatives = initiatives ?? initialData.initiatives ?? [];
-  const safeTeams = teams ?? initialData.teams ?? [];
-  const safeFeatures = features ?? initialData.features ?? [];
-  const safeSprints = sprints ?? initialData.sprints ?? [];
+  const safeInitiatives = initiatives?.length ? initiatives : initialData.initiatives ?? [];
+  const safeTeams = teams?.length ? teams : initialData.teams ?? [];
+  const safeFeatures = features?.length ? features : initialData.features ?? [];
+  const safeSprints = sprints?.length ? sprints : initialData.sprints ?? [];
 
   const artInitiatives = safeInitiatives.filter(
     (initiative) => initiative.artId === activeArtId
