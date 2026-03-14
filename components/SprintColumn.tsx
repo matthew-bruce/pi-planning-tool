@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Feature, Sprint } from '@/lib/models';
+import type { Feature, Sprint } from '@/lib/models';
 import { formatSprintRange } from '@/lib/utils';
 import { FeatureCard } from '@/components/FeatureCard';
 
