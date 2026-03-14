@@ -311,7 +311,7 @@ export function AdminControlCentre(props: {
                     <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
                     <td className="p-2 space-x-2">
                       <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Cycle marked active')}>Set active</button>
-                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_archived: true, is_active: false }), 'Cycle archived')}>Archive</button>
+                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Cycle deactivated')}>Deactivate</button>
                     </td>
                   </tr>
                 ))}
