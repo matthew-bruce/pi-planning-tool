@@ -6,7 +6,6 @@ export type PlanningCycle = {
   sprint_count: number;
   sprint_length_days: number;
   is_active: boolean;
-  is_archived?: boolean;
 };
 
 export type Sprint = {
