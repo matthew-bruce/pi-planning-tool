@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { DashboardData } from '@/lib/supabase/dashboard';
+import type { DashboardData } from '@/lib/types/dashboard';
 
 type Props = { initialData: DashboardData };
 
