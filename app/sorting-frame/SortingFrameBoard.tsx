@@ -40,33 +40,59 @@ export function SortingFrameBoard({
   const sensors = useSensors(useSensor(PointerSensor));
 
   const activeArtId = selectedArtId ?? initialData.selectedArtId ?? null;
-  const safeInitiatives = initiatives?.length ? initiatives : initialData.initiatives ?? [];
-  const safeTeams = teams?.length ? teams : initialData.teams ?? [];
-  const safeFeatures = features?.length ? features : initialData.features ?? [];
-  const safeSprints = sprints?.length ? sprints : initialData.sprints ?? [];
 
-  const artInitiatives = safeInitiatives.filter(
-    (initiative) => initiative.artId === activeArtId
+  const safeInitiatives = useMemo(
+    () => (initiatives && initiatives.length > 0 ? initiatives : initialData.initiatives ?? []),
+    [initiatives, initialData.initiatives]
   );
 
-  const filteredFeatures = safeFeatures.filter((feature) => {
-    const team = safeTeams.find((t) => t.id === feature.teamId);
-    const initiativeInArt = artInitiatives.some(
-      (initiative) => initiative.id === feature.initiativeId
-    );
-    const matchesPlatform =
-      platformFilter === 'ALL' || team?.platform === platformFilter;
-    const q = `${feature.ticketKey ?? ''} ${feature.title ?? ''}`.toLowerCase();
+  const safeTeams = useMemo(
+    () => (teams && teams.length > 0 ? teams : initialData.teams ?? []),
+    [teams, initialData.teams]
+  );
 
-    return initiativeInArt && matchesPlatform && q.includes(search.toLowerCase());
-  });
+  const safeFeatures = useMemo(
+    () => (features && features.length > 0 ? features : initialData.features ?? []),
+    [features, initialData.features]
+  );
+
+  const safeSprints = useMemo(
+    () => (sprints && sprints.length > 0 ? sprints : initialData.sprints ?? []),
+    [sprints, initialData.sprints]
+  );
+
+  const artInitiatives = useMemo(
+    () => safeInitiatives.filter((initiative) => initiative.artId === activeArtId),
+    [safeInitiatives, activeArtId]
+  );
+
+  const filteredFeatures = useMemo(() => {
+    return safeFeatures.filter((feature) => {
+      const team = safeTeams.find((t) => t.id === feature.teamId);
+      const initiativeInArt = artInitiatives.some(
+        (initiative) => initiative.id === feature.initiativeId
+      );
+      const matchesPlatform =
+        platformFilter === 'ALL' || team?.platform === platformFilter;
+      const q = `${feature.ticketKey ?? ''} ${feature.title ?? ''}`.toLowerCase();
+
+      return (
+        initiativeInArt &&
+        matchesPlatform &&
+        q.includes(search.toLowerCase())
+      );
+    });
+  }, [safeFeatures, safeTeams, artInitiatives, platformFilter, search]);
 
   const platforms = useMemo(
     () => ['ALL', ...new Set(safeTeams.map((team) => team.platform).filter(Boolean))],
     [safeTeams]
   );
 
-  const parking = filteredFeatures.filter((feature) => feature.sprintId === null);
+  const parking = useMemo(
+    () => filteredFeatures.filter((feature) => feature.sprintId === null),
+    [filteredFeatures]
+  );
 
   const onDragEnd = (event: DragEndEvent) => {
     const featureId = String(event.active.id);
