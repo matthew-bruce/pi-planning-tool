@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { SortingFrameBoard } from '@/components/sorting-frame/SortingFrameBoard';
 import { getSortingFrameData } from '@/lib/supabase/sortingFrame';
 
