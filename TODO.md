@@ -16,10 +16,10 @@ Active work — tackle these before anything else.
 - [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
-- [ ] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
-- [ ] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
-- [ ] Admin header — planning header should be hidden on `/admin` (same treatment as Help page)
-- [ ] Bulk Triage — add "⚠ Not yet connected to live data" banner so users understand the current state
+- [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
+- [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
+- [x] Admin header — planning header hidden on `/admin` and `/help`
+- [x] Bulk Triage — "⚠ Not yet connected to live data" banner added
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 
 ---
@@ -50,8 +50,15 @@ Active work — tackle these before anything else.
 - [x] Bulk Triage page (Zustand/demo data — P1 gap remains)
 - [x] Help Centre — searchable, collapsible sections, sidebar navigation, right panel
 - [x] Dead code removed: `types/dashboard.ts` duplicate, `app/sorting-frame/SortingFrameBoard.tsx`, `app/dashboard/LiveDashboard.tsx`
-- [x] `PROPOSITION.md`, `ARCHITECTURE.md`, `TODO.md`, `DEVELOPER_SETUP.md` written and committed
+- [x] `PROPOSITION.md`, `ARCHITECTURE.md`, `TODO.md`, `DEVELOPER_SETUP.md`, `SESSION_RULES.md` written and committed
 - [x] Local dev environment established (VS Code, Git Bash, npm, Claude Code CLI, localhost:3000)
+- [x] Schema Phase 1 — 24 additive changes applied (new columns, `app_settings`, `team_art_assignments`, indexes, ART short names, CRM ART, team_type)
+- [x] ART switching bug fixed — removed `selectedArtId` from first `useEffect` deps in `SortingFrameBoard`
+- [x] Permanent "Loading…" bug fixed — `setLoading(false)` added to early-return guard branch
+- [x] Admin/Help header fix — `showPlanningHeader` flag suppresses planning header on `/admin` and `/help`
+- [x] Bulk Triage "not live data" banner added
+- [x] TypeScript declaration errors resolved — `npm install` restored missing `node_modules`
+- [x] `.gitignore` added — was entirely absent from repo
 
 ---
 
@@ -543,3 +550,22 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 | Team Planning Room (live data) | ⬜ Not yet | Update when P1 complete |
 
 > **Rule:** Whenever a feature is added, modified, or planned for roadmap — update this table. Help content must be refreshed after significant feature changes.
+
+---
+
+## 🧪 Testing Backlog
+
+> **Rule:** New pure functions get tests at the time they are written. Not retroactively.
+> Run `npm run test` before every push.
+
+| Area | Status | Notes |
+|---|---|---|
+| Sprint generation utilities | ✅ Done | `lib/planning/__tests__/` |
+| Merge strategy logic | ⬜ Not yet | Write when upsert strategy is built |
+| Snapshot rebuild | ⬜ Not yet | Write when deterministic rebuild lands |
+| Sorting Frame data fetcher | ⬜ Not yet | Integration test against known DB state |
+| Import pipeline | ⬜ Not yet | Known CSV → expected live table output |
+| Dashboard data queries | ⬜ Not yet | |
+| E2E: Sorting Frame loads with data | ⬜ Not yet | Playwright — before first real PI Planning event |
+| E2E: ART switching works | ⬜ Not yet | Playwright |
+| E2E: Import flow completes | ⬜ Not yet | Playwright |
