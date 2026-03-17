@@ -15,7 +15,7 @@ Active work — tackle these before anything else.
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
 - [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
-- [ ] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
+- [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
   - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text
   - `DispatchShell.tsx` and any nav labels referencing cycles
   - `data/helpContent.ts` — all Help Centre references
