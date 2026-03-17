@@ -5,8 +5,10 @@ export type DashboardData = {
     start_date: string;
     end_date: string;
     is_active: boolean;
+    is_archived: boolean;
+    current_stage: number;
   } | null;
-  arts: Array<{ id: string; name: string }>;
+  arts: Array<{ id: string; name: string; short_name: string | null }>;
   selectedArtId: string | null;
   refreshedAt: string;
   summary: {

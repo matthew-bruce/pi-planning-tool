@@ -1,8 +1,17 @@
-export type Art = { id: string; name: string };
+export type Art = {
+  id: string;
+  name: string;
+  shortName?: string | null;
+};
 
 export type Initiative = { id: string; artId: string; name: string };
 
-export type Team = { id: string; platform: string; name: string };
+export type Team = {
+  id: string;
+  platform: string;
+  name: string;
+  teamType: 'stream-aligned' | 'platform' | 'enabling' | 'complicated-subsystem';
+};
 
 export type Sprint = {
   id: string;
@@ -21,6 +30,7 @@ export type DependencyCounts = {
 export type Feature = {
   id: string;
   ticketKey: string;
+  sourceKey?: string | null;
   title: string;
   initiativeId: string;
   teamId: string;
@@ -38,6 +48,8 @@ export type Dependency = {
   id: string;
   sourceFeatureId: string;
   targetFeatureId: string;
+  sourceFeatureUuid?: string | null;
+  targetFeatureUuid?: string | null;
   type: DependencyType;
 };
 

@@ -8,9 +8,11 @@ type Cycle = {
   start_date: string;
   end_date: string;
   is_active: boolean;
+  is_archived: boolean;
+  current_stage: number;
 };
 
-type Art = { id: string; name: string; is_active: boolean };
+type Art = { id: string; name: string; short_name: string | null; is_active: boolean };
 
 type Initiative = {
   id: string;
@@ -120,7 +122,7 @@ export async function getActiveOrSelectedPlanningCycle(
   if (selectedCycleId) {
     const { data } = await supabase
       .from('planning_cycles')
-      .select('id,name,start_date,end_date,is_active')
+      .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
       .eq('id', selectedCycleId)
       .maybeSingle();
 
@@ -129,7 +131,7 @@ export async function getActiveOrSelectedPlanningCycle(
 
   const { data: active } = await supabase
     .from('planning_cycles')
-    .select('id,name,start_date,end_date,is_active')
+    .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
     .eq('is_active', true)
     .order('start_date', { ascending: false })
     .limit(1)
@@ -139,7 +141,7 @@ export async function getActiveOrSelectedPlanningCycle(
 
   const { data: latest } = await supabase
     .from('planning_cycles')
-    .select('id,name,start_date,end_date,is_active')
+    .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
     .order('start_date', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -724,13 +726,14 @@ export async function getDashboardData(input: {
 
   const { data: arts } = await supabase
     .from('arts')
-    .select('id,name,is_active')
+    .select('id,name,short_name,is_active')
     .eq('is_active', true)
     .order('name');
 
   const activeArts = ((arts ?? []) as Art[]).map((art) => ({
     id: art.id,
     name: art.name,
+    short_name: art.short_name,
   }));
 
   const selectedArtId =
