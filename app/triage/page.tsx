@@ -10,6 +10,9 @@ export default function TriagePage() {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-3">Bulk Triage</h2>
+      <div className="mb-4 rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+        ⚠ Bulk Triage is not yet connected to live data. Figures shown are for demonstration purposes only.
+      </div>
       <div className="overflow-auto border rounded">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100">

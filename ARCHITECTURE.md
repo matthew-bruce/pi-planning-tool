@@ -406,8 +406,8 @@ Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
 | Team Planning not Supabase-connected | 🔴 P1 | `app/team-planning/` |
 | Dependencies page not Supabase-connected | 🔴 P1 | `app/dependencies/` |
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
-| ART switching bug on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
-| Permanent "Loading…" on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
+| ART switching bug on Sorting Frame | ✅ Fixed | `components/sorting-frame/SortingFrameBoard.tsx` — removed `selectedArtId` from first useEffect deps |
+| Permanent "Loading…" on Sorting Frame | ✅ Fixed | `components/sorting-frame/SortingFrameBoard.tsx` — `setLoading(false)` on early-return guard |
 | `planning_cycles` table needs renaming to `program_increments` | 🟠 P2 | DB + all TypeScript |
 | `planning_cycle_id` columns need renaming to `program_increment_id` | 🟠 P2 | DB + all TypeScript |
 | `status` column ambiguous — needs renaming to `workflow_status` | 🟠 P2 | `features`, `stories` |

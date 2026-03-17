@@ -13,13 +13,13 @@
 Active work — tackle these before anything else.
 
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
-- [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
+- [x] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
-- [ ] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
-- [ ] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
-- [ ] Admin header — planning header should be hidden on `/admin` (same treatment as Help page)
-- [ ] Bulk Triage — add "⚠ Not yet connected to live data" banner so users understand the current state
+- [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
+- [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
+- [x] Admin header — planning header hidden on `/admin` and `/help` routes (no DispatchShell header injected)
+- [x] Bulk Triage — "⚠ Not yet connected to live data" warning banner added
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 
 ---

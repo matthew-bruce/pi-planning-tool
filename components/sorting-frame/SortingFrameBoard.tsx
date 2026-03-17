@@ -32,18 +32,25 @@ export function SortingFrameBoard({ initialData }: Props) {
     setArts,
   } = useDispatchStore();
 
+  // Sync store + local state when server-rendered initialData arrives.
+  // Must NOT include selectedArtId in deps — user ART clicks must not
+  // re-run this effect and overwrite their selection with the stale server value.
   useEffect(() => {
     setArts(initialData.arts);
     setData(initialData);
-
-    if (initialData.selectedArtId && initialData.selectedArtId !== selectedArtId) {
+    if (initialData.selectedArtId) {
       setSelectedArtId(initialData.selectedArtId);
     }
-  }, [initialData, selectedArtId, setArts, setSelectedArtId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   useEffect(() => {
     if (!selectedArtId) return;
-    if (selectedArtId === data.selectedArtId) return;
+    if (selectedArtId === data.selectedArtId) {
+      // Already showing the right ART — nothing to fetch.
+      setLoading(false);
+      return;
+    }
 
     const params = new URLSearchParams();
     params.set('selectedArtId', selectedArtId);
