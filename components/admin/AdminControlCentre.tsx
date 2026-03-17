@@ -295,17 +295,32 @@ export function AdminControlCentre(props: {
           <h3 className="font-semibold">Program Increments</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
+              <colgroup>
+                <col />{/* Name — flexible */}
+                <col className="w-32" />{/* Start */}
+                <col className="w-36" />{/* End */}
+                <col className="w-16" />{/* Sprints */}
+                <col className="w-28" />{/* Length (days) */}
+                <col className="w-16" />{/* Active */}
+                <col className="w-44" />{/* Actions */}
+              </colgroup>
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-2 text-left">Name</th><th className="p-2 text-left">Start</th><th className="p-2 text-left">End</th><th className="p-2 text-left">Sprints</th><th className="p-2 text-left">Length (days)</th><th className="p-2 text-left">Active</th><th className="p-2 text-left">Actions</th>
+                  <th className="p-2 text-left">Name</th>
+                  <th className="p-2 text-left">Start</th>
+                  <th className="p-2 text-left">End</th>
+                  <th className="p-2 text-left">Sprints</th>
+                  <th className="p-2 text-left">Length (days)</th>
+                  <th className="p-2 text-left">Active</th>
+                  <th className="p-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {props.planningCycles.map((cycle) => (
-                  <tr key={cycle.id} className="border-t">
-                    <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Program Increment updated')} /></td>
-                    <td className="p-2">{cycle.start_date}</td>
-                    <td className="p-2">{cycle.end_date}</td>
+                  <tr key={cycle.id} className="border-t hover:bg-gray-50 transition-colors">
+                    <td className="p-2"><input className="border rounded px-2 py-1 w-full text-sm" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Program Increment updated')} /></td>
+                    <td className="p-2 whitespace-nowrap">{cycle.start_date}</td>
+                    <td className="p-2 whitespace-nowrap">{cycle.end_date}</td>
                     <td className="p-2">{cycle.sprint_count}</td>
                     <td className="p-2">{cycle.sprint_length_days}</td>
                     <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
@@ -315,15 +330,15 @@ export function AdminControlCentre(props: {
                     </td>
                   </tr>
                 ))}
-                <tr className="border-t bg-gray-50">
+                <tr className="border-t border-gray-200 bg-gray-50">
                   <td className="p-2">
-                    <input className="border rounded px-2 py-1 w-full text-sm" placeholder="e.g. FY26 Q1" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" placeholder="e.g. FY26 Q1" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
                   </td>
                   <td className="p-2">
-                    <input className="border rounded px-2 py-1 text-sm" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
                   </td>
                   <td className="p-2">
-                    <div className="rounded border border-dashed border-gray-300 bg-white px-2 py-1 text-sm text-gray-400 whitespace-nowrap">
+                    <div className="rounded border border-dashed border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-400 whitespace-nowrap">
                       {cycleForm.startDate ? (() => {
                         const [y, m, d] = cycleForm.startDate.split('-').map(Number);
                         const end = new Date(y, m - 1, d + cycleForm.sprintCount * cycleForm.sprintLengthDays);
@@ -332,12 +347,12 @@ export function AdminControlCentre(props: {
                     </div>
                   </td>
                   <td className="p-2">
-                    <input className="border rounded px-2 py-1 w-14 text-sm" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
                   </td>
                   <td className="p-2">
-                    <input className="border rounded px-2 py-1 w-14 text-sm" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
                   </td>
-                  <td className="p-2 text-gray-400 text-sm">—</td>
+                  <td className="p-2 text-gray-400">—</td>
                   <td className="p-2">
                     <button
                       className="rounded bg-royalRed text-white px-2 py-1 text-xs whitespace-nowrap"
