@@ -13,7 +13,7 @@ const ok = () => ({ ok: true as const });
 const fail = (error: string) => ({ ok: false as const, error });
 
 export async function savePlanningCycleAction(payload: {
-  cycle: Omit<PlanningCycle, 'id' | 'is_archived'>;
+  cycle: Omit<PlanningCycle, 'id' | 'is_archived' | 'current_stage' | 'updated_at'>;
   sprints: GeneratedSprintPreview[];
 }) {
   const result = await createPlanningCycleWithSprints(payload);

@@ -7,6 +7,8 @@ type DbCycle = {
   start_date: string;
   end_date: string;
   is_active: boolean;
+  is_archived: boolean;
+  current_stage: number;
 };
 
 type DbSprint = {
@@ -21,6 +23,7 @@ type DbSprint = {
 type DbArt = {
   id: string;
   name: string;
+  short_name: string | null;
   is_active: boolean;
 };
 
@@ -98,7 +101,7 @@ export type SortingFrameData = {
     startDate: string;
     endDate: string;
   }>;
-  arts: Array<{ id: string; name: string }>;
+  arts: Array<{ id: string; name: string; short_name: string | null }>;
   selectedArtId: string | null;
   initiatives: SortingFrameInitiativeGroup[];
   parkingLot: Feature[];
@@ -287,6 +290,7 @@ export async function getSortingFrameData(input: {
   const arts = (await getArts()).map((art) => ({
     id: art.id,
     name: art.name,
+    short_name: art.short_name,
   }));
 
   const selectedArtId =

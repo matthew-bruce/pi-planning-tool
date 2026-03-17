@@ -22,7 +22,7 @@ export async function listSprints(): Promise<Sprint[]> {
 }
 
 export async function createPlanningCycleWithSprints(payload: {
-  cycle: Omit<PlanningCycle, 'id'>;
+  cycle: Omit<PlanningCycle, 'id' | 'is_archived' | 'current_stage' | 'updated_at'>;
   sprints: GeneratedSprintPreview[];
 }) {
   const supabase = getSupabaseServerClient();

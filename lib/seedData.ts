@@ -3,8 +3,8 @@ import { DispatchData, Feature, Sprint } from '@/lib/models';
 type InitiativeSeed = { name: string; teams: { name: string; platform: string }[] };
 
 const arts = [
-  { id: 'art-web-app', name: 'Web & App' },
-  { id: 'art-ooh', name: 'Out Of Home' },
+  { id: 'art-web-app', name: 'Web & App', shortName: 'WAA' },
+  { id: 'art-ooh', name: 'Out Of Home', shortName: 'OOH' },
 ];
 
 const webAppInitiatives: InitiativeSeed[] = [
@@ -62,7 +62,7 @@ export function createSeedData(): DispatchData {
       initiatives.push({ id: initiativeId, artId, name: seed.name });
       seed.teams.forEach((team) => {
         if (!teamsMap.has(team.name)) {
-          teamsMap.set(team.name, { id: `team-${team.name.toLowerCase().replace(/\s+/g, '-')}`, name: team.name, platform: team.platform });
+          teamsMap.set(team.name, { id: `team-${team.name.toLowerCase().replace(/\s+/g, '-')}`, name: team.name, platform: team.platform, teamType: 'stream-aligned' });
         }
       });
     });
