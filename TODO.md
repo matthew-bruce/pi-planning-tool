@@ -15,6 +15,11 @@ Active work — tackle these before anything else.
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
 - [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
+- [ ] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
+  - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text
+  - `DispatchShell.tsx` and any nav labels referencing cycles
+  - `data/helpContent.ts` — all Help Centre references
+  - Also rename the "PI Cycle 2026" data row in Supabase `planning_cycles` table to something sensible (e.g. delete it or rename to `FY26 Q1 (duplicate)`)
 - [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
 - [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
 - [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
@@ -569,3 +574,68 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 | E2E: Sorting Frame loads with data | ⬜ Not yet | Playwright — before first real PI Planning event |
 | E2E: ART switching works | ⬜ Not yet | Playwright |
 | E2E: Import flow completes | ⬜ Not yet | Playwright |
+
+---
+
+## 💡 Captured Ideas — Not Yet Prioritised
+
+These emerged during product thinking sessions and are worth revisiting. Not yet assigned to a priority tier.
+
+- [ ] **Pre-PI Feature seeding from ART/Product owner**
+  - ART owners and Directors own Features and Epics — not Stories
+  - Stories are created by Teams during PI Planning breakouts in their BAU tooling
+  - A future import/sync path that allows an ART owner to load Features into Dispatch before the event begins
+  - Features land in the parking lot — Teams then sequence them into sprints during breakouts
+  - Stories created during the event sync back via ADO/Jira integration
+  - In a mature SAFe organisation, Features already exist in ADO/Jira pre-event — live sync would handle this automatically with no CSV needed
+  - CSV import remains the fallback for orgs where Features aren't yet in ADO/Jira before the event
+
+- [ ] **Sync scope filtering — prevent full backlog sync**
+  - Live ADO/Jira sync must never pull an entire team backlog — could contain years of items, thousands of rows, poor hygiene
+  - Teams and Product Managers must be able to tag or label Features as "in scope for PI Planning" in their BAU tooling before the event
+  - Dispatch sync only pulls items matching the scope filter — everything else is ignored
+  - Standard SAFe mechanism: a PI Planning label, tag, iteration path, fix version, or custom field in ADO/Jira
+  - Exact filter mechanism will differ by source system:
+    - ADO: iteration path, tag, or custom field (e.g. `PI Planning Candidate = true`)
+    - Jira: label (e.g. `pi-planning-fy26-q1`), fix version, or custom field
+  - Admin should allow the facilitator to configure the scope filter per Program Increment before sync is enabled
+  - CSV import is naturally scoped — teams only include what they choose to export — but guidance should encourage the same discipline
+  - Without this, sync is not safe to enable at scale — this is a prerequisite for live ADO/Jira integration going live
+
+- [ ] **Import Wizard — guided import flow**
+
+  Replace the current single-screen import with a multi-step wizard that guides users through validation and resolution before committing. Transforms the scariest action in the app into the most reassuring one.
+
+  **Flow:**
+  1. **Upload** — drop zone, reassurance copy that source data is never affected
+  2. **Reading your file** — animated parse, summary of what was found (rows, features, stories, dependencies, issues count)
+  3. **Validation steps — logical order matching the data hierarchy:**
+     Each step ticks off visibly as it passes. Issues pause the flow for resolution before proceeding.
+     - ✅/⚠️ File structure — required columns present and readable
+     - ✅/⚠️ Program Increment & Sprints — sprint names match the active PI. Unmatched → parking lot or skip.
+     - ✅/⚠️ ARTs — all ART names recognised. Unknown → create or assign to existing.
+     - ✅/⚠️ Initiatives — matched or offered for creation, linked to correct ART.
+     - ✅/⚠️ Platforms — matched against existing platforms.
+     - ✅/⚠️ Teams — two sub-checks: (a) team doesn't exist → offer to create and add to PI, (b) team exists but not on this PI → offer to activate. Never conflate these two cases.
+     - ✅/⚠️ Features — by this point all containers are resolved.
+     - ✅/⚠️ Stories — features resolved first, stories linked to them.
+     - ✅/⚠️ Dependencies — features imported first, dependency keys resolved.
+  4. **Confirm summary** — full list of everything that will happen (creates, activations, imports, parking lot moves). Nothing has been written yet at this point.
+  5. **Importing** — animated progress with live counts per entity type
+  6. **Done** — full success summary including things that went smoothly, not just issues resolved
+
+  **Emotional arc:** confidence builds through accumulating green ticks. By the time the user sees the first issue, they've already seen multiple things succeed. The wizard never feels like a wall of errors.
+
+  **Key principles:**
+  - **Auto-advance when clean** — the wizard proceeds automatically through every step that has no issues. No "Next" button required. The user watches it work.
+  - **Pause only on human decisions** — the wizard stops and waits only when it needs the user to make a choice: an unknown entity, a mismatch, an ambiguous mapping. Everything else flows through without interruption.
+  - **Communicate success visibly** — every step that passes cleanly should tick off in real time. The user sees progress accumulating. Green ticks are as important as warnings.
+  - **No destructive action without explicit user confirmation** — the wizard never writes anything without the user's knowledge. The confirm summary screen is the final gate before any DB writes.
+  - **Meaningful distinction between "team doesn't exist" vs "team exists but not on this PI"** — these are different problems requiring different responses. Never conflate them.
+  - **Wizard teaches the data model implicitly** — users understand Dispatch better after their first import.
+  - **Resolution choices remembered per PI** — don't ask the same question twice within the same import session.
+  - **Import must be transactional** — if it fails mid-way, newly created entities are not left orphaned.
+  - **Every screen carries reassurance:** "Your Jira/ADO data is never affected."
+  - **A clean import requires zero clicks beyond the initial upload and final confirm.** The wizard is not a form — it is a guided, largely automatic process that only surfaces when it genuinely needs help.
+
+  **Technical note:** requires the import pipeline to be fully transactional before wizard resolution steps (create team + activate + import) can be made atomic.
