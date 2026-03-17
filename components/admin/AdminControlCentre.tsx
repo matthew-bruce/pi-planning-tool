@@ -25,7 +25,7 @@ import { buildSprintNameSet, getCycleSprintNames, isSprintMappedToCycle } from '
 type TabKey = 'cycles' | 'platforms' | 'arts' | 'teams' | 'initiatives' | 'imports';
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: 'cycles', label: 'Planning Cycles' },
+  { key: 'cycles', label: 'Program Increments' },
   { key: 'platforms', label: 'Platforms' },
   { key: 'arts', label: 'ARTs' },
   { key: 'teams', label: 'Teams' },
@@ -85,7 +85,7 @@ export function AdminControlCentre(props: {
   const [message, setMessage] = useState<string>('');
 
   const [cycleForm, setCycleForm] = useState({
-    name: `PI Cycle ${new Date().getFullYear()}`,
+    name: `FY${new Date().getFullYear()} Q1`,
     startDate: '',
     sprintCount: 6,
     sprintLengthDays: 14,
@@ -164,7 +164,7 @@ export function AdminControlCentre(props: {
         return;
       }
       if (!isSprintMappedToCycle(row.sprint, activeCycleSprintSet)) {
-        warnings.push(`${rowLabel}: unknown sprint '${row.sprint}' for selected planning cycle`);
+        warnings.push(`${rowLabel}: unknown sprint '${row.sprint}' for the selected Program Increment`);
       }
       if (!row.storyKey) {
         errors.push(`${rowLabel}: storyKey is missing`);
@@ -197,7 +197,7 @@ export function AdminControlCentre(props: {
     <div className="space-y-4">
       <div className="rounded border border-gray-200 bg-white p-4">
         <h2 className="text-2xl font-bold text-gray-900">Dispatch Admin Control Centre</h2>
-        <p className="text-sm text-gray-600 mt-1">Configure planning cycles, teams, initiatives and import planning data</p>
+        <p className="text-sm text-gray-600 mt-1">Configure Program Increments, teams, initiatives and import planning data</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ export function AdminControlCentre(props: {
 
       <section className="rounded border border-gray-200 bg-white p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">Cycle Readiness & Import Health</h3>
+          <h3 className="text-lg font-semibold text-gray-900">PI Readiness & Import Health</h3>
           <select
             className="border rounded px-2 py-1 text-sm"
             value={selectedSummaryCycle}
@@ -232,13 +232,13 @@ export function AdminControlCentre(props: {
 
         {!selectedReadiness ? (
           <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-            No active cycle configured or readiness data available.
+            No active Program Increment configured or readiness data available.
           </div>
         ) : (
           <>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded border border-red-200 bg-red-50 p-3">
-                <p className="text-xs text-gray-600">Active Cycle</p>
+                <p className="text-xs text-gray-600">Active Program Increment</p>
                 <p className="font-semibold text-gray-900">{selectedReadiness.cycleName}</p>
                 <p className="text-xs text-gray-600">{selectedReadiness.cycleStartDate} → {selectedReadiness.cycleEndDate}</p>
               </div>
@@ -275,14 +275,14 @@ export function AdminControlCentre(props: {
             <div className="rounded border border-gray-200 bg-gray-50 p-3">
               <h4 className="font-semibold text-sm mb-2">Attention Items</h4>
               <ul className="space-y-1 text-sm">
-                {!hasActiveCycle && <li className="text-royalRed">• No active cycle configured.</li>}
+                {!hasActiveCycle && <li className="text-royalRed">• No active Program Increment configured.</li>}
                 {selectedReadiness.attentionItems.map((item) => (
                   <li key={item} className="text-royalRed">
                     • {item}
                   </li>
                 ))}
                 {hasActiveCycle && selectedReadiness.attentionItems.length === 0 && (
-                  <li className="text-green-700">• No immediate attention items for this cycle.</li>
+                  <li className="text-green-700">• No immediate attention items for this Program Increment.</li>
                 )}
               </ul>
             </div>
@@ -293,7 +293,7 @@ export function AdminControlCentre(props: {
       {activeTab === 'cycles' && (
         <div className="space-y-4">
           <div className="rounded border p-4">
-            <h3 className="font-semibold mb-3">Planning Cycles</h3>
+            <h3 className="font-semibold mb-3">Program Increments</h3>
             <table className="min-w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
@@ -303,15 +303,15 @@ export function AdminControlCentre(props: {
               <tbody>
                 {props.planningCycles.map((cycle) => (
                   <tr key={cycle.id} className="border-t">
-                    <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Cycle updated')} /></td>
+                    <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Program Increment updated')} /></td>
                     <td className="p-2">{cycle.start_date}</td>
                     <td className="p-2">{cycle.end_date}</td>
                     <td className="p-2">{cycle.sprint_count}</td>
                     <td className="p-2">{cycle.sprint_length_days}</td>
                     <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
                     <td className="p-2 space-x-2">
-                      <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Cycle marked active')}>Set active</button>
-                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Cycle deactivated')}>Deactivate</button>
+                      <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Program Increment activated')}>Set active</button>
+                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Program Increment deactivated')}>Deactivate</button>
                     </td>
                   </tr>
                 ))}
@@ -320,9 +320,9 @@ export function AdminControlCentre(props: {
           </div>
 
           <div className="rounded border p-4 space-y-3">
-            <h3 className="font-semibold">Create New Planning Cycle</h3>
+            <h3 className="font-semibold">Create New Program Increment</h3>
             <div className="grid md:grid-cols-4 gap-3">
-              <input className="border rounded px-2 py-1" placeholder="Cycle name" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <input className="border rounded px-2 py-1" placeholder="PI name (e.g. FY26 Q1)" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
               <input className="border rounded px-2 py-1" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
               <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
               <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
@@ -376,11 +376,11 @@ export function AdminControlCentre(props: {
                           },
                           sprints: cyclePreview,
                         }),
-                      'Cycle created',
+                      'Program Increment created',
                     );
                   }}
                 >
-                  Save Planning Cycle
+                  Save Program Increment
                 </button>
               </div>
             )}
@@ -437,7 +437,7 @@ export function AdminControlCentre(props: {
           </div>
 
           <div className="flex items-center gap-2 text-sm">
-            <label>Planning cycle:</label>
+            <label>Program Increment:</label>
             <select className="border rounded px-2 py-1" value={selectedTeamCycle} onChange={(e) => setSelectedTeamCycle(e.target.value)}>
               {props.planningCycles.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.name}</option>)}
             </select>
@@ -471,7 +471,7 @@ export function AdminControlCentre(props: {
             <button className="rounded bg-royalRed px-3 py-1 text-white text-sm" onClick={() => submit(() => createInitiativeAction({ name: newInitiative.name, art_id: newInitiative.art_id || null, planning_cycle_id: selectedInitiativeCycle, is_active: true }), 'Initiative created')}>Add Initiative</button>
           </div>
 
-          <table className="min-w-full text-sm"><thead className="bg-gray-100"><tr><th className="p-2 text-left">Name</th><th className="p-2 text-left">ART</th><th className="p-2 text-left">Cycle</th><th className="p-2 text-left">Status</th></tr></thead><tbody>
+          <table className="min-w-full text-sm"><thead className="bg-gray-100"><tr><th className="p-2 text-left">Name</th><th className="p-2 text-left">ART</th><th className="p-2 text-left">PI</th><th className="p-2 text-left">Status</th></tr></thead><tbody>
             {props.initiatives.filter((initiative) => initiative.planning_cycle_id === selectedInitiativeCycle).map((initiative) => (
               <tr key={initiative.id} className="border-t">
                 <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={initiative.name} onBlur={(e) => submit(() => updateInitiativeAction(initiative.id, { name: e.target.value }), 'Initiative updated')} /></td>

@@ -177,7 +177,7 @@ export function SortingFrameBoard({ initialData }: Props) {
   if (!data.cycle) {
     return (
       <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No active planning cycle configured.
+        No active Program Increment configured.
       </div>
     );
   }

@@ -91,30 +91,30 @@ export const helpSections: HelpSection[] = [
     topics: [
       {
         id: "planning-cycles",
-        title: "Planning Cycles",
+        title: "Program Increments",
         summary:
-          "Planning Cycles represent a PI / quarter in Dispatch. Each cycle owns its sprint cadence, initiatives, imports and live planning state.",
-        tags: ["planning cycle", "quarter", "sprints"],
+          "Program Increments represent a PI / quarter in Dispatch. Each PI owns its sprint cadence, initiatives, imports and live planning state.",
+        tags: ["program increment", "PI", "quarter", "sprints"],
         sections: [
           {
             id: "cycle-definition",
-            title: "How Planning Cycles work",
+            title: "How Program Increments work",
             defaultOpen: true,
             content:
-              "A Planning Cycle defines the planning horizon for a PI. It includes a start date, sprint count, sprint cadence and generated sprint schedule.",
+              "A Program Increment defines the planning horizon. It includes a start date, sprint count, sprint cadence and generated sprint schedule.",
             bullets: [
-              "A cycle is created in the Admin Control Centre",
-              "The sprint schedule is generated automatically from the cycle start date and sprint count",
+              "A Program Increment is created in the Admin Control Centre",
+              "The sprint schedule is generated automatically from the PI start date and sprint count",
               "Sprint numbering continues across the year rather than resetting each quarter",
             ],
             tip:
-              "Dispatch previews the generated sprint dates before the cycle is saved, so the cadence can be confirmed before use.",
+              "Dispatch previews the generated sprint dates before the Program Increment is saved, so the cadence can be confirmed before use.",
           },
           {
             id: "cycle-selection",
-            title: "Active cycle behaviour",
+            title: "Active PI behaviour",
             content:
-              "If only one cycle exists, Dispatch will use it automatically. If multiple cycles exist, the app defaults to the current active cycle or the most recent cycle by date. Users can switch to previous cycles for reference.",
+              "If only one Program Increment exists, Dispatch will use it automatically. If multiple exist, the app defaults to the current active PI or the most recent one by date. Users can switch to previous Program Increments for reference.",
           },
         ],
       },
@@ -205,7 +205,7 @@ export const helpSections: HelpSection[] = [
             title: "What it shows",
             defaultOpen: true,
             content:
-              "The Sorting Frame organises the current Planning Cycle into sprint columns and initiative groups. Teams appear beneath initiatives only when they have work in that initiative.",
+              "The Sorting Frame organises the current Program Increment into sprint columns and initiative groups. Teams appear beneath initiatives only when they have work in that initiative.",
             bullets: [
               "Sprint columns across the top",
               "Initiative groups as the main row structure",
@@ -235,7 +235,7 @@ export const helpSections: HelpSection[] = [
             title: "Purpose",
             defaultOpen: true,
             content:
-              "Where the Sorting Frame shows the whole programme, Team Planning Room helps one team focus on what they are expected to deliver across the planning cycle.",
+              "Where the Sorting Frame shows the whole programme, Team Planning Room helps one team focus on what they are expected to deliver across the Program Increment.",
             bullets: [
               "Features grouped by team",
               "Sequencing across sprints",
@@ -310,7 +310,7 @@ export const helpSections: HelpSection[] = [
             content:
               "The Admin area is the operational backbone of Dispatch. It is used to set up the planning environment and manage imports safely.",
             bullets: [
-              "Planning Cycles",
+              "Program Increments",
               "Platforms",
               "ARTs",
               "Teams",
@@ -320,9 +320,9 @@ export const helpSections: HelpSection[] = [
           },
           {
             id: "cycle-readiness",
-            title: "Cycle Readiness & Import Health",
+            title: "PI Readiness & Import Health",
             content:
-              "The Admin area also includes readiness and import health signals, helping facilitators see whether the current cycle is configured properly and whether the imported data can be trusted.",
+              "The Admin area also includes readiness and import health signals, helping facilitators see whether the current Program Increment is configured properly and whether the imported data can be trusted.",
           },
         ],
       },
@@ -380,9 +380,9 @@ export const helpSections: HelpSection[] = [
             id: "mismatch-handling",
             title: "Sprint mismatch handling",
             content:
-              "Dispatch uses the Planning Cycle cadence as the canonical sprint structure. If imported sprint names or dates do not match the cycle, the user is warned before import proceeds.",
+              "Dispatch uses the Program Increment sprint cadence as the canonical sprint structure. If imported sprint names or dates do not match the PI, the user is warned before import proceeds.",
             warning:
-              "Dispatch should not silently rewrite the cycle cadence based on imported data. Mismatches must be reviewed and confirmed.",
+              "Dispatch should not silently rewrite the Program Increment sprint cadence based on imported data. Mismatches must be reviewed and confirmed.",
           },
         ],
       },

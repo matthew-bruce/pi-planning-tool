@@ -153,8 +153,8 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 - `stories.commitment_status` — derive from parent feature instead
 
 **UI label updates:**
-- All "Planning Cycle" text → "Program Increment"
-- All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"
+- ~~All "Planning Cycle" text → "Program Increment"~~ ✅ Done
+- ~~All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"~~ ✅ Done
 
 **Code renames:**
 - `lib/admin/planningCycles.ts` → `lib/admin/programIncrements.ts`
