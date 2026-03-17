@@ -291,44 +291,68 @@ export function AdminControlCentre(props: {
       </section>
 
       {activeTab === 'cycles' && (
-        <div className="space-y-4">
-          <div className="rounded border p-4">
+        <div className="rounded border p-4 space-y-6">
+          <div>
             <h3 className="font-semibold mb-3">Program Increments</h3>
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 text-left">Name</th><th className="p-2 text-left">Start</th><th className="p-2 text-left">End</th><th className="p-2 text-left">Sprints</th><th className="p-2 text-left">Length (days)</th><th className="p-2 text-left">Active</th><th className="p-2 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {props.planningCycles.map((cycle) => (
-                  <tr key={cycle.id} className="border-t">
-                    <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Program Increment updated')} /></td>
-                    <td className="p-2">{cycle.start_date}</td>
-                    <td className="p-2">{cycle.end_date}</td>
-                    <td className="p-2">{cycle.sprint_count}</td>
-                    <td className="p-2">{cycle.sprint_length_days}</td>
-                    <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
-                    <td className="p-2 space-x-2">
-                      <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Program Increment activated')}>Set active</button>
-                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Program Increment deactivated')}>Deactivate</button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-2 text-left">Name</th><th className="p-2 text-left">Start</th><th className="p-2 text-left">End</th><th className="p-2 text-left">Sprints</th><th className="p-2 text-left">Length (days)</th><th className="p-2 text-left">Active</th><th className="p-2 text-left">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {props.planningCycles.map((cycle) => (
+                    <tr key={cycle.id} className="border-t">
+                      <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Program Increment updated')} /></td>
+                      <td className="p-2">{cycle.start_date}</td>
+                      <td className="p-2">{cycle.end_date}</td>
+                      <td className="p-2">{cycle.sprint_count}</td>
+                      <td className="p-2">{cycle.sprint_length_days}</td>
+                      <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
+                      <td className="p-2 space-x-2">
+                        <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Program Increment activated')}>Set active</button>
+                        <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Program Increment deactivated')}>Deactivate</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="rounded border p-4 space-y-3">
+          <div className="border-t pt-4 space-y-4">
             <h3 className="font-semibold">Create New Program Increment</h3>
-            <div className="grid md:grid-cols-4 gap-3">
-              <input className="border rounded px-2 py-1" placeholder="PI name (e.g. FY26 Q1)" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
-              <input className="border rounded px-2 py-1" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
-              <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
-              <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-3">
+              <div className="col-span-2 md:col-span-4">
+                <label className="block text-xs text-gray-500 mb-1">PI name</label>
+                <input className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. FY26 Q1" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Start date</label>
+                <input className="w-full border rounded px-2 py-1 text-sm" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Sprints</label>
+                <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Sprint length (days)</label>
+                <input className="w-full border rounded px-2 py-1 text-sm" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Calculated end date</label>
+                <div className="w-full rounded border border-dashed border-gray-300 bg-gray-50 px-2 py-1 text-sm text-gray-500">
+                  {cycleForm.startDate ? (() => {
+                    const [y, m, d] = cycleForm.startDate.split('-').map(Number);
+                    const end = new Date(y, m - 1, d + cycleForm.sprintCount * cycleForm.sprintLengthDays);
+                    return end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                  })() : '—'}
+                </div>
+              </div>
             </div>
             <button
-              className="rounded bg-royalRed text-white px-3 py-1 text-sm"
+              className="rounded bg-royalRed text-white px-3 py-1.5 text-sm"
               onClick={() => {
                 const preview = generateSprintPreview({
                   startDate: cycleForm.startDate,
@@ -345,21 +369,23 @@ export function AdminControlCentre(props: {
 
             {!!cyclePreview.length && (
               <div className="space-y-2">
-                <table className="min-w-full text-sm border rounded">
-                  <thead className="bg-gray-100"><tr><th className="p-2 text-left">Sprint</th><th className="p-2 text-left">Start Date</th><th className="p-2 text-left">End Date</th></tr></thead>
-                  <tbody>
-                    {cyclePreview.map((sprint, idx) => (
-                      <tr className="border-t" key={sprint.sprint_number}>
-                        <td className="p-2">{sprint.name}</td>
-                        <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
-                        <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm border rounded">
+                    <thead className="bg-gray-100"><tr><th className="p-2 text-left">Sprint</th><th className="p-2 text-left">Start Date</th><th className="p-2 text-left">End Date</th></tr></thead>
+                    <tbody>
+                      {cyclePreview.map((sprint, idx) => (
+                        <tr className="border-t" key={sprint.sprint_number}>
+                          <td className="p-2">{sprint.name}</td>
+                          <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
+                          <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={previewConfirmed} onChange={(e) => setPreviewConfirmed(e.target.checked)} /> I confirm this sprint preview</label>
                 <button
-                  className="rounded bg-royalRed text-white px-3 py-1 text-sm disabled:opacity-50"
+                  className="rounded bg-royalRed text-white px-3 py-1.5 text-sm disabled:opacity-50"
                   disabled={!previewConfirmed || !cyclePreview.length}
                   onClick={() => {
                     const endDate = cyclePreview[cyclePreview.length - 1]?.end_date ?? cycleForm.startDate;
