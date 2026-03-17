@@ -296,13 +296,13 @@ export function AdminControlCentre(props: {
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <colgroup>
-                <col />{/* Name — flexible */}
-                <col className="w-32" />{/* Start */}
-                <col className="w-36" />{/* End */}
-                <col className="w-16" />{/* Sprints */}
-                <col className="w-28" />{/* Length (days) */}
-                <col className="w-16" />{/* Active */}
-                <col className="w-44" />{/* Actions */}
+                <col className="w-1/4" />{/* Name ~25% */}
+                <col className="w-1/6" />{/* Start ~17% */}
+                <col className="w-1/6" />{/* End ~17% */}
+                <col className="w-1/12" />{/* Sprints ~8% */}
+                <col className="w-1/12" />{/* Length (days) ~8% */}
+                <col className="w-1/12" />{/* Active ~8% */}
+                <col className="w-1/6" />{/* Actions ~17% */}
               </colgroup>
               <thead className="bg-gray-100">
                 <tr>
