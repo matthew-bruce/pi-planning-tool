@@ -575,7 +575,7 @@ export function AdminControlCentre(props: {
                   <tbody>
                     {editPreview.map((sprint, idx) => (
                       <tr className="border-t" key={sprint.sprint_number}>
-                        <td className="p-2">{sprint.name}</td>
+                        <td className="p-2"><input className="border-b border-gray-300 bg-transparent px-1 py-0.5 w-full focus:outline-none focus:border-royalRed" value={sprint.name} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, name: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
                       </tr>
@@ -629,7 +629,7 @@ export function AdminControlCentre(props: {
                   <tbody>
                     {cyclePreview.map((sprint, idx) => (
                       <tr className="border-t" key={sprint.sprint_number}>
-                        <td className="p-2">{sprint.name}</td>
+                        <td className="p-2"><input className="border-b border-gray-300 bg-transparent px-1 py-0.5 w-full focus:outline-none focus:border-royalRed" value={sprint.name} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, name: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
                       </tr>
