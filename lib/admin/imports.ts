@@ -40,36 +40,49 @@ export async function insertSnapshotRows(payload: {
     planning_cycle_id: payload.planningCycleId,
     feature_key: row.featureKey,
     feature_title: row.featureTitle,
-    team_name: row.team,
-    initiative_name: row.initiative,
-    art_name: row.art,
-    platform_name: row.platform,
-    source_system: row.sourceSystem,
-  }));
-
-  const storyRows = payload.rows.map((row) => ({
-    import_snapshot_id: payload.snapshotId,
-    planning_cycle_id: payload.planningCycleId,
-    story_key: row.storyKey,
-    story_title: row.storyTitle,
-    feature_key: row.featureKey,
-    sprint_name: row.sprint,
-    status: row.status,
+    team_name: row.team ?? null,
+    initiative_name: row.initiative ?? null,
+    art_name: row.art ?? null,
+    platform_name: row.platform ?? null,
+    sprint_name: row.sprint ?? null,
+    status: row.status ?? null,
     commitment_status: row.commitmentStatus ?? null,
+    source_system: 'CSV',
   }));
 
-  const dependencyRows = payload.rows
-    .filter((row) => row.dependsOnKey || row.dependencyType)
+  // Only insert story rows where a story key is present (feature-only rows have no story data)
+  const storyRows = payload.rows
+    .filter((row) => row.storyKey)
     .map((row) => ({
       import_snapshot_id: payload.snapshotId,
       planning_cycle_id: payload.planningCycleId,
-      source_feature_key: row.featureKey,
-      target_feature_key: row.dependsOnKey ?? null,
-      dependency_type: row.dependencyType ?? null,
+      story_key: row.storyKey,
+      story_title: row.storyTitle || row.storyKey,
+      feature_key: row.featureKey ?? null,
+      feature_title: row.featureTitle ?? null,
+      team_name: row.team ?? null,
+      initiative_name: row.initiative ?? null,
+      art_name: row.art ?? null,
+      platform_name: row.platform ?? null,
+      sprint_name: row.sprint ?? null,
+      status: row.status ?? null,
+      commitment_status: row.commitmentStatus ?? null,
+      source_system: 'CSV',
+    }));
+
+  // Only insert dependency rows where both the source key and type are present (both NOT NULL in schema)
+  const dependencyRows = payload.rows
+    .filter((row) => row.dependsOnKey && row.dependencyType)
+    .map((row) => ({
+      import_snapshot_id: payload.snapshotId,
+      planning_cycle_id: payload.planningCycleId,
+      source_ticket_key: row.featureKey,
+      target_ticket_key: row.dependsOnKey,
+      dependency_type: row.dependencyType,
       dependency_owner: row.dependencyOwner ?? null,
-      criticality: row.dependencyCriticality ?? null,
-      target_sprint: row.dependencyTargetSprint ?? null,
-      description: row.dependencyDescription ?? null,
+      dependency_criticality: row.dependencyCriticality ?? null,
+      dependency_target_sprint: row.dependencyTargetSprint ?? null,
+      dependency_description: row.dependencyDescription ?? null,
     }));
 
   const { error: featuresError } = await supabase.from('snapshot_features').insert(featureRows);
@@ -144,9 +157,9 @@ export async function rebuildLiveTablesFromSnapshots(planningCycleId: string) {
     await supabase.from('features').insert(
       snapshotFeatures.map((row: Record<string, unknown>) => ({
         planning_cycle_id: planningCycleId,
-        feature_key: row.feature_key,
+        ticket_key: row.feature_key,
         title: row.feature_title,
-        source_system: row.source_system,
+        source_system: row.source_system ?? 'CSV',
       })),
     );
   }
@@ -155,11 +168,11 @@ export async function rebuildLiveTablesFromSnapshots(planningCycleId: string) {
     await supabase.from('stories').insert(
       snapshotStories.map((row: Record<string, unknown>) => ({
         planning_cycle_id: planningCycleId,
-        story_key: row.story_key,
+        ticket_key: row.story_key,
         title: row.story_title,
-        feature_key: row.feature_key,
         status: row.status,
-        sprint_name: row.sprint_name,
+        source_system: row.source_system ?? 'CSV',
+        // feature_id and sprint_id require UUID lookups — not available during snapshot rebuild
       })),
     );
   }
@@ -168,9 +181,13 @@ export async function rebuildLiveTablesFromSnapshots(planningCycleId: string) {
     await supabase.from('dependencies').insert(
       snapshotDependencies.map((row: Record<string, unknown>) => ({
         planning_cycle_id: planningCycleId,
-        source_feature_key: row.source_feature_key,
-        target_feature_key: row.target_feature_key,
+        source_ticket_key: row.source_ticket_key,
+        target_ticket_key: row.target_ticket_key,
         dependency_type: row.dependency_type,
+        dependency_owner: row.dependency_owner,
+        dependency_criticality: row.dependency_criticality,
+        dependency_target_sprint: row.dependency_target_sprint,
+        dependency_description: row.dependency_description,
       })),
     );
   }
