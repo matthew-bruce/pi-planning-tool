@@ -170,10 +170,16 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 - ~~All "Planning Cycle" text → "Program Increment"~~ ✅ Done
 - ~~All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"~~ ✅ Done
 
-**Code renames:**
+**Code renames — full codebase sweep:**
 - `lib/admin/planningCycles.ts` → `lib/admin/programIncrements.ts`
 - All TypeScript types: `PlanningCycle` → `ProgramIncrement`
 - All function names: `getActiveOrSelectedPlanningCycle` → `getActiveOrSelectedProgramIncrement`
+- All other function/variable names containing `cycle` or `planningCycle` → `increment` / `programIncrement`
+- All code comments referencing "planning cycle" → "Program Increment"
+- All JSDoc comments, inline comments, console.log strings — full sweep
+- Use grep/search across entire codebase: search for `[Cc]ycle`, `[Pp]lanning[Cc]ycle`, `planningCycle`, `PlanningCycle`
+- Exception: do NOT rename `team_cycle_participation` variable references until the DB table itself is renamed in the same Phase 2 migration — rename code and DB together atomically
+- Run `tsc --noEmit` after all renames to confirm zero TypeScript errors before pushing
 
 ### Other P2 items
 
@@ -189,6 +195,37 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 - [ ] **Remove dead null guards in `lib/admin/*.ts`**
   - `getSupabaseServerClient` throws on missing env vars — it never returns null
   - Guards like `if (!supabase) return []` are misleading dead code
+
+- [ ] **Program Increment management — inline edit, delete/archive**
+  - Existing PI rows display as read-only — no form inputs except the create row
+  - Edit icon on each row transforms it into editable state — save/cancel
+  - Delete checks for linked data before allowing — warns with counts if data exists
+  - Archive option (is_archived = true) offered as safer alternative to delete
+  - Create row visually distinct from existing rows
+  - ✅ Completed when: edit, delete/archive all working with safety checks
+
+- [ ] **Sprint numbering — fix across-year and DEMO/TEST cycle behaviour**
+
+  **Three rules that must all be enforced in `sprintNumbering.ts`:**
+
+  1. **DEMO — and TEST — cycles always start from Sprint 1**
+     Sandboxed cycles must never inherit or affect the real sprint sequence.
+     Fix: check PI name prefix before calculating starting sprint number.
+
+  2. **Sprint numbering resets to Sprint 1 at the start of each financial year**
+     Continuous numbering within a year is correct (Q1=1-6, Q2=7-13 etc).
+     But Sprint 26 should be followed by Sprint 1 in the new FY — not Sprint 27.
+     Fix: detect financial year boundary from PI start date. If new PI is in a
+     different FY than the most recent real PI, reset to Sprint 1.
+     Financial year boundary for RMG: April 1 (FY runs Apr–Mar).
+
+  3. **Show starting sprint number in preview — allow override**
+     The sprint preview table should show a visible "Starting sprint number"
+     field that auto-calculates but is editable. Facilitators may need to
+     override for catch-up PIs or special cycles. Prevents silent surprises on import.
+
+  **Note:** Sprint names are intentionally locked after creation — sprints are
+  referenced by UUID in features.sprint_id, so renaming would break data integrity.
 
 - [ ] **Program Increment carry-forward on creation**
   - When creating a new PI, automatically copy participating teams and ARTs from the previous PI

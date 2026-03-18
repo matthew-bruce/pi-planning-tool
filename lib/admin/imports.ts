@@ -45,7 +45,6 @@ export async function insertSnapshotRows(payload: {
     art_name: row.art,
     platform_name: row.platform,
     source_system: row.sourceSystem,
-    raw_row: row,
   }));
 
   const storyRows = payload.rows.map((row) => ({
@@ -57,7 +56,6 @@ export async function insertSnapshotRows(payload: {
     sprint_name: row.sprint,
     status: row.status,
     commitment_status: row.commitmentStatus ?? null,
-    raw_row: row,
   }));
 
   const dependencyRows = payload.rows
@@ -72,7 +70,6 @@ export async function insertSnapshotRows(payload: {
       criticality: row.dependencyCriticality ?? null,
       target_sprint: row.dependencyTargetSprint ?? null,
       description: row.dependencyDescription ?? null,
-      raw_row: row,
     }));
 
   const { error: featuresError } = await supabase.from('snapshot_features').insert(featureRows);
