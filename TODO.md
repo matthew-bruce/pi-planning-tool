@@ -13,7 +13,15 @@
 Active work — tackle these before anything else.
 
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
-- [x] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
+- [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
+- [ ] **CRITICAL BUG — rebuildLiveTablesFromSnapshots silently fails to populate features/stories/dependencies**
+  - Import pipeline stores raw snapshots correctly but the rebuild step produces zero rows in live tables
+  - 3 successful imports against Demo PI — all showing 211 rows in import_snapshots — but features table was empty
+  - Features had to be manually reconstructed via SQL
+  - Root cause unknown — likely a JOIN failure, a missing column reference post-Phase-1-schema-changes, or a silent exception being swallowed
+  - Fix: read rebuildLiveTablesFromSnapshots in lib/admin/imports.ts, add proper error propagation, fix the rebuild query, verify it produces correct row counts after every import
+  - This is the most critical bug in the codebase — every import has been silently broken
+
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
   - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text
@@ -23,8 +31,6 @@ Active work — tackle these before anything else.
 - [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
 - [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
 - [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
-- [x] Admin header — planning header hidden on `/admin` and `/help` routes (no DispatchShell header injected)
-- [x] Bulk Triage — "⚠ Not yet connected to live data" warning banner added
 - [x] Admin header — planning header hidden on `/admin` and `/help`
 - [x] Bulk Triage — "⚠ Not yet connected to live data" banner added
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
@@ -37,17 +43,17 @@ Active work — tackle these before anything else.
 - [x] Supabase connected (server client, env vars, `lib/supabase/server.ts`)
 - [x] Tailwind configured with `royalRed: '#CC0000'` design token
 - [x] Provider pattern — `DataProvider` interface + `dummyProvider` + Zustand store
-- [x] Seed data generator (`lib/seedData.ts`) with real RMG initiatives/teams
+- [x] Seed data generator (`lib/seedData.ts`) with real RMG value streams/teams
 - [x] Demo Mode — simulation ticks every 8–15s, activity feed, localStorage persistence
 - [x] `DispatchShell` — nav, header, ART selector, Demo Mode toggle, density toggle
-- [x] Sorting Frame — Supabase-connected, initiative groups, team lanes, sprint columns, parking lot, drag-and-drop, ART filter, platform filter, search, compact/detailed density, empty board state
+- [x] Sorting Frame — Supabase-connected, value stream groups, team lanes, sprint columns, parking lot, drag-and-drop, ART filter, platform filter, search, compact/detailed density, empty board state
 - [x] Live Tracking Dashboard — fully Supabase-connected: KPIs, ART tiles, convergence, sprint distribution, dependency overview (by type/criticality/owner), import freshness, activity feed, attention items, ART filter, refresh
 - [x] Admin Control Centre — full tabbed UI:
   - Program Increments (list, create with sprint preview, activate, deactivate) — ⚠️ UI labels still say "Planning Cycle", Phase 2 rename pending
   - Platforms (CRUD)
   - ARTs (CRUD)
   - Teams (CRUD, platform assignment, cycle participation toggles)
-  - Initiatives (CRUD, ART assignment, cycle scoping)
+  - Value Streams (CRUD, ART assignment, cycle scoping)
   - Import / Sync (CSV upload, column mapping, validation, history, rollback)
 - [x] Cycle Readiness & Import Health panel in Admin
 - [x] Sprint generation utilities (`lib/planning/sprintGeneration.ts`, `sprintNumbering.ts`, `sprintMapping.ts`)
@@ -130,7 +136,7 @@ Changes:
 12. arts: update existing row 'Web & App' to set short_name = 'WAA'
 13. arts: update existing row 'Out Of Home' to set short_name = 'OOH'
 14. arts: insert new row name = 'Customer Relationship Management', short_name = 'CRM', is_active = true
-15. initiatives: add updated_at timestamptz NOT NULL DEFAULT now()
+15. value streams: add updated_at timestamptz NOT NULL DEFAULT now()
 16. teams: add updated_at timestamptz NOT NULL DEFAULT now()
 17. teams: add team_type text NOT NULL DEFAULT 'stream-aligned' with CHECK constraint: team_type IN ('stream-aligned', 'platform', 'enabling', 'complicated-subsystem')
 18. teams: update all existing rows to set team_type = 'stream-aligned' (should already be default but be explicit)
@@ -166,9 +172,20 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 **Removals (verify unused first):**
 - `stories.commitment_status` — derive from parent feature instead
 
+**Value Stream rename (previously "Initiative"):**
+- All UI labels: "Initiative" → "Value Stream", "Initiatives" → "Value Streams"
+- `lib/admin/initiatives.ts` → `lib/admin/valueStreams.ts`
+- All TypeScript types: `Initiative` → `ValueStream`
+- All function names: `getInitiatives` → `getValueStreams`, `createInitiative` → `createValueStream` etc
+- All variable names, code comments, JSDoc — full sweep
+- DB table `initiatives` → `value_streams` (rename atomically with code)
+- DB column `initiative_id` → `value_stream_id` on `features` and other tables
+- CSV import field `initiative_name` in snapshot tables → `value_stream_name`
+- Note: CSV import column header remains `initiative` for backwards compatibility with existing exports — map to value_stream internally
+
 **UI label updates:**
-- ~~All "Planning Cycle" text → "Program Increment"~~ ✅ Done
-- ~~All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"~~ ✅ Done
+- All "Planning Cycle" text → "Program Increment"
+- All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"
 
 **Code renames — full codebase sweep:**
 - `lib/admin/planningCycles.ts` → `lib/admin/programIncrements.ts`
@@ -243,7 +260,7 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 
   **Data foundation:**
   - When Demo Mode is switched ON, automatically load the `DEMO —` planning cycle from Supabase as the data foundation
-  - This gives the simulation 62 real features, 29 real teams, 18 real initiatives and realistic dependencies to work with
+  - This gives the simulation 62 real features, 29 real teams, 18 real value streams and realistic dependencies to work with
   - The Gold demo dataset is not just for development testing — it IS the showcase dataset for Demo Mode
   - When Demo Mode is switched OFF, revert to the real active planning cycle
 
@@ -496,13 +513,13 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
   - Add semantic tokens to `tailwind.config.ts`
   - Candidates: `surface`, `border`, `textPrimary`, `textMuted`, `success`, `warning`
 
-- [x] **`isArchived` flag on `planning_cycles`**
-  - Column added in Schema Phase 1
-  - Archive/unarchive implemented in Admin PI table (Archive icon, confirmation dialog, muted row, Unarchive button)
-  - Archived PIs excluded from cycle pickers across the app: separate task (see P3 cycle switcher)
+- [ ] **`isArchived` flag on `planning_cycles`**
+  - Currently only `is_active` exists
+  - Add `is_archived` so old cycles can be hidden from pickers without deletion
+  - Requires DB migration + Admin UI toggle
 
 - [ ] **Sorting Frame visual hierarchy**
-  - Initiative sections as distinct bordered containers
+  - Value Stream sections as distinct bordered containers
   - Sticky team label column on swimlanes
   - Sprint header row pinned and aligned to grid
   - Empty sprint cells show "Drop feature here" affordance
@@ -653,7 +670,7 @@ These emerged during product thinking sessions and are worth revisiting. Not yet
      - ✅/⚠️ File structure — required columns present and readable
      - ✅/⚠️ Program Increment & Sprints — sprint names match the active PI. Unmatched → parking lot or skip.
      - ✅/⚠️ ARTs — all ART names recognised. Unknown → create or assign to existing.
-     - ✅/⚠️ Initiatives — matched or offered for creation, linked to correct ART.
+     - ✅/⚠️ Value Streams — matched or offered for creation, linked to correct ART.
      - ✅/⚠️ Platforms — matched against existing platforms.
      - ✅/⚠️ Teams — two sub-checks: (a) team doesn't exist → offer to create and add to PI, (b) team exists but not on this PI → offer to activate. Never conflate these two cases.
      - ✅/⚠️ Features — by this point all containers are resolved.
@@ -678,3 +695,65 @@ These emerged during product thinking sessions and are worth revisiting. Not yet
   - **A clean import requires zero clicks beyond the initial upload and final confirm.** The wizard is not a form — it is a guided, largely automatic process that only surfaces when it genuinely needs help.
 
   **Technical note:** requires the import pipeline to be fully transactional before wizard resolution steps (create team + activate + import) can be made atomic.
+
+---
+
+## 🎨 UI & Design Improvements (post-data milestone)
+
+These were identified after the first successful load of the gold demo dataset.
+
+- [ ] **Design system — extend Tailwind tokens**
+  - Update `royalRed` from `#CC0000` to `#EE2722` (official RMG brand red)
+  - Add `royalYellow: '#FDDD1C'` (official RMG brand yellow — for warnings, Demo Mode banner)
+  - Add semantic status tokens: `success`, `warning`, `danger`, `neutral`
+  - Add surface tokens: `surface`, `surfaceSubtle`, `border`, `textPrimary`, `textMuted`
+  - Add Value Stream accent palette: `vs1` through `vs8` (light pastel tints for board section backgrounds)
+  - All changes in `tailwind.config.ts` only — no arbitrary hex values anywhere
+
+- [ ] **Dashboard — contextual colour coding**
+  - KPI cards: colour-code values against thresholds (green/amber/red)
+  - High criticality dependencies: always red regardless of count
+  - Teams with fresh data: red when 0 during an active event
+  - ART convergence tiles: colour by convergence % (0-50% red, 50-75% amber, 75%+ green)
+  - Sprint distribution bars: colour by load (under/balanced/overloaded)
+  - Convergence gauge: show stage-appropriate target marker
+
+- [ ] **Sorting Frame — Value Stream visual differentiation**
+  - Each Value Stream section gets a tinted background from the `vs1`–`vs8` palette
+  - Assigned consistently (same VS always gets same colour within a session)
+  - Colour is subtle — tints the section header and background, doesn't overpower cards
+  - Team swimlane headers more visually prominent
+
+- [ ] **Feature cards — status pills and dependency badges**
+  - Commitment status pills: Draft (gray), Planned (blue), Committed (green)
+  - Dependency badges: colour by criticality — High (red), Medium (amber), Low (green)
+  - Story count icon — clarify what it means visually
+  - Icon key — accessible via a persistent (?) or (i) button near the board
+
+- [ ] **Global Activity Feed panel**
+  - Collapsible right-side panel accessible from ALL planning pages (not Admin/Help)
+  - Collapsed state: thin tab on right edge with live notification dot for new events
+  - Expanded state: slides in 320px from right, overlays content without reflowing layout
+  - Open/closed state persisted in localStorage per session
+  - Event type colour coding via left border:
+    - Feature activity — blue `#3b82f6`
+    - Dependency events — amber `#d97706`
+    - Import activity — purple `#7c3aed`
+    - Risks & attention — red `#dc2626`
+    - Planning progress — green `#16a34a`
+    - System — gray `#6b7280`
+  - **Navigation — no scrollbar:**
+    - Feed loads with most recent events at top
+    - "↑ Back to latest" pill button appears when scrolled down
+    - "N new events ↑" badge when new events arrive while scrolled down
+    - Smooth scroll animation — no visible scrollbar (scrollbar-hide)
+  - Filter chips at top of panel matching event taxonomy
+  - "Open full screen →" link at bottom
+
+- [ ] **Standalone Activity Feed page (`/activity`)**
+  - Full-screen layout — feed takes full width, larger text, more breathing room
+  - Designed to be projected on a wall or second monitor during PI Planning
+  - Auto-refreshes in real time — no manual refresh
+  - Same filter chips as panel version
+  - Link from Activity Feed panel: "Open full screen →"
+  - Accessible without login during PoC phase
