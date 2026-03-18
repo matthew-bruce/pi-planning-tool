@@ -82,6 +82,65 @@ export async function updatePlanningCycle(
   return { error: error?.message };
 }
 
+export async function updatePlanningCycleWithSprints(payload: {
+  id: string;
+  cycle: {
+    name: string;
+    start_date: string;
+    end_date: string;
+    sprint_count: number;
+    sprint_length_days: number;
+  };
+  sprints: GeneratedSprintPreview[];
+}) {
+  const supabase = getSupabaseServerClient();
+
+  const { error: cycleError } = await supabase
+    .from('planning_cycles')
+    .update({
+      name: payload.cycle.name,
+      start_date: payload.cycle.start_date,
+      end_date: payload.cycle.end_date,
+      sprint_count: payload.cycle.sprint_count,
+      sprint_length_days: payload.cycle.sprint_length_days,
+    })
+    .eq('id', payload.id);
+
+  if (cycleError) return { error: cycleError.message };
+
+  // Delete existing sprints and replace with new ones
+  const { error: deleteError } = await supabase
+    .from('sprints')
+    .delete()
+    .eq('planning_cycle_id', payload.id);
+
+  if (deleteError) return { error: deleteError.message };
+
+  const { error: sprintError } = await supabase.from('sprints').insert(
+    payload.sprints.map((sprint) => ({
+      planning_cycle_id: payload.id,
+      sprint_number: sprint.sprint_number,
+      name: sprint.name,
+      start_date: sprint.start_date,
+      end_date: sprint.end_date,
+    }))
+  );
+
+  if (sprintError) return { error: sprintError.message };
+
+  return { error: undefined };
+}
+
+export async function archivePlanningCycle(id: string, isArchived: boolean) {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from('planning_cycles')
+    .update({ is_archived: isArchived })
+    .eq('id', id);
+
+  return { error: error?.message };
+}
+
 export async function markCycleActive(cycleId: string) {
   const supabase = getSupabaseServerClient();
 

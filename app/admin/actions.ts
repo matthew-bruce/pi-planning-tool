@@ -5,7 +5,7 @@ import { CsvMappedRow, GeneratedSprintPreview, PlanningCycle } from '@/lib/admin
 import { createArt, updateArt } from '@/lib/admin/arts';
 import { createImportActivityEvent, createImportSnapshot, insertSnapshotRows, rebuildLiveTablesFromSnapshots, rollbackLatestImport } from '@/lib/admin/imports';
 import { createInitiative, updateInitiative } from '@/lib/admin/initiatives';
-import { createPlanningCycleWithSprints, markCycleActive, updatePlanningCycle } from '@/lib/admin/planningCycles';
+import { archivePlanningCycle, createPlanningCycleWithSprints, markCycleActive, updatePlanningCycle, updatePlanningCycleWithSprints } from '@/lib/admin/planningCycles';
 import { createPlatform, updatePlatform } from '@/lib/admin/platforms';
 import { createTeam, updateTeam, upsertTeamCycleParticipation } from '@/lib/admin/teams';
 
@@ -24,6 +24,30 @@ export async function savePlanningCycleAction(payload: {
 
 export async function updatePlanningCycleAction(id: string, updates: Partial<PlanningCycle>) {
   const result = await updatePlanningCycle(id, updates);
+  if (result.error) return fail(result.error);
+  revalidatePath('/admin');
+  return ok();
+}
+
+export async function updatePlanningCycleWithSprintsAction(payload: {
+  id: string;
+  cycle: {
+    name: string;
+    start_date: string;
+    end_date: string;
+    sprint_count: number;
+    sprint_length_days: number;
+  };
+  sprints: GeneratedSprintPreview[];
+}) {
+  const result = await updatePlanningCycleWithSprints(payload);
+  if (result.error) return fail(result.error);
+  revalidatePath('/admin');
+  return ok();
+}
+
+export async function archivePlanningCycleAction(id: string, isArchived: boolean) {
+  const result = await archivePlanningCycle(id, isArchived);
   if (result.error) return fail(result.error);
   revalidatePath('/admin');
   return ok();
@@ -111,7 +135,6 @@ export async function updateInitiativeAction(id: string, updates: { name?: strin
 export async function runImportAction(payload: {
   planningCycleId: string;
   fileName: string;
-  sourceSystem: string;
   validRows: CsvMappedRow[];
   warningCount: number;
   totalRows: number;
@@ -120,7 +143,7 @@ export async function runImportAction(payload: {
   const snapshot = await createImportSnapshot({
     planning_cycle_id: payload.planningCycleId,
     file_name: payload.fileName,
-    source_system: payload.sourceSystem,
+    source_system: 'csv_import',
     row_count: payload.totalRows,
     status: 'imported',
   });

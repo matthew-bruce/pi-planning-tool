@@ -1,11 +1,13 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { Archive, ArchiveRestore, Check, Pencil, X } from 'lucide-react';
 import {
   createArtAction,
   createInitiativeAction,
   createPlatformAction,
   createTeamAction,
+  archivePlanningCycleAction,
   markCycleActiveAction,
   rollbackLatestImportAction,
   runImportAction,
@@ -15,6 +17,7 @@ import {
   updateInitiativeAction,
   updatePlatformAction,
   updatePlanningCycleAction,
+  updatePlanningCycleWithSprintsAction,
   updateTeamAction,
 } from '@/app/admin/actions';
 import { Art, CsvMappedRow, CycleReadinessSummary, GeneratedSprintPreview, ImportSnapshot, Initiative, PlanningCycle, Platform, Sprint, Team, TeamCycleParticipation } from '@/lib/admin/types';
@@ -25,7 +28,7 @@ import { buildSprintNameSet, getCycleSprintNames, isSprintMappedToCycle } from '
 type TabKey = 'cycles' | 'platforms' | 'arts' | 'teams' | 'initiatives' | 'imports';
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: 'cycles', label: 'Planning Cycles' },
+  { key: 'cycles', label: 'Program Increments' },
   { key: 'platforms', label: 'Platforms' },
   { key: 'arts', label: 'ARTs' },
   { key: 'teams', label: 'Teams' },
@@ -85,15 +88,55 @@ export function AdminControlCentre(props: {
   const [message, setMessage] = useState<string>('');
 
   const [cycleForm, setCycleForm] = useState({
-    name: `PI Cycle ${new Date().getFullYear()}`,
+    name: `FY${new Date().getFullYear()} Q1`,
     startDate: '',
     sprintCount: 6,
     sprintLengthDays: 14,
   });
   const [cyclePreview, setCyclePreview] = useState<GeneratedSprintPreview[]>([]);
   const [previewConfirmed, setPreviewConfirmed] = useState(false);
+  const [editPreviewFor, setEditPreviewFor] = useState<string | null>(null);
+
+  const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', startDate: '', sprintCount: 0, sprintLengthDays: 0 });
+  const [editPreview, setEditPreview] = useState<GeneratedSprintPreview[]>([]);
+  const [editPreviewConfirmed, setEditPreviewConfirmed] = useState(false);
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
 
   const latestSprintNumber = useMemo(() => getLatestSprintNumber(props.sprints), [props.sprints]);
+
+  const cycleImportCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const snapshot of props.imports) {
+      if (snapshot.status === 'imported') {
+        counts[snapshot.planning_cycle_id] = (counts[snapshot.planning_cycle_id] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [props.imports]);
+
+  const startEditCycle = (cycle: PlanningCycle) => {
+    setEditingCycleId(cycle.id);
+    setEditForm({
+      name: cycle.name,
+      startDate: cycle.start_date,
+      sprintCount: cycle.sprint_count,
+      sprintLengthDays: cycle.sprint_length_days,
+    });
+    setEditPreview([]);
+    setEditPreviewConfirmed(false);
+    setEditPreviewFor(null);
+    // Clear any create preview
+    setCyclePreview([]);
+    setPreviewConfirmed(false);
+  };
+
+  const cancelEditCycle = () => {
+    setEditingCycleId(null);
+    setEditPreview([]);
+    setEditPreviewConfirmed(false);
+    setEditPreviewFor(null);
+  };
 
   const [selectedTeamCycle, setSelectedTeamCycle] = useState(props.planningCycles[0]?.id ?? '');
   const [selectedInitiativeCycle, setSelectedInitiativeCycle] = useState(props.planningCycles[0]?.id ?? '');
@@ -117,7 +160,6 @@ export function AdminControlCentre(props: {
     headers: [] as string[],
     rows: [] as string[][],
     mappings: {} as Record<string, string>,
-    sourceSystem: 'CSV Upload',
   });
 
   const participatingLookup = useMemo(() => {
@@ -164,7 +206,7 @@ export function AdminControlCentre(props: {
         return;
       }
       if (!isSprintMappedToCycle(row.sprint, activeCycleSprintSet)) {
-        warnings.push(`${rowLabel}: unknown sprint '${row.sprint}' for selected planning cycle`);
+        warnings.push(`${rowLabel}: unknown sprint '${row.sprint}' for the selected Program Increment`);
       }
       if (!row.storyKey) {
         errors.push(`${rowLabel}: storyKey is missing`);
@@ -197,7 +239,7 @@ export function AdminControlCentre(props: {
     <div className="space-y-4">
       <div className="rounded border border-gray-200 bg-white p-4">
         <h2 className="text-2xl font-bold text-gray-900">Dispatch Admin Control Centre</h2>
-        <p className="text-sm text-gray-600 mt-1">Configure planning cycles, teams, initiatives and import planning data</p>
+        <p className="text-sm text-gray-600 mt-1">Configure Program Increments, teams, initiatives and import planning data</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -216,7 +258,7 @@ export function AdminControlCentre(props: {
 
       <section className="rounded border border-gray-200 bg-white p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">Cycle Readiness & Import Health</h3>
+          <h3 className="text-lg font-semibold text-gray-900">PI Readiness & Import Health</h3>
           <select
             className="border rounded px-2 py-1 text-sm"
             value={selectedSummaryCycle}
@@ -232,13 +274,13 @@ export function AdminControlCentre(props: {
 
         {!selectedReadiness ? (
           <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-            No active cycle configured or readiness data available.
+            No active Program Increment configured or readiness data available.
           </div>
         ) : (
           <>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded border border-red-200 bg-red-50 p-3">
-                <p className="text-xs text-gray-600">Active Cycle</p>
+                <p className="text-xs text-gray-600">Active Program Increment</p>
                 <p className="font-semibold text-gray-900">{selectedReadiness.cycleName}</p>
                 <p className="text-xs text-gray-600">{selectedReadiness.cycleStartDate} → {selectedReadiness.cycleEndDate}</p>
               </div>
@@ -275,14 +317,14 @@ export function AdminControlCentre(props: {
             <div className="rounded border border-gray-200 bg-gray-50 p-3">
               <h4 className="font-semibold text-sm mb-2">Attention Items</h4>
               <ul className="space-y-1 text-sm">
-                {!hasActiveCycle && <li className="text-royalRed">• No active cycle configured.</li>}
+                {!hasActiveCycle && <li className="text-royalRed">• No active Program Increment configured.</li>}
                 {selectedReadiness.attentionItems.map((item) => (
                   <li key={item} className="text-royalRed">
                     • {item}
                   </li>
                 ))}
                 {hasActiveCycle && selectedReadiness.attentionItems.length === 0 && (
-                  <li className="text-green-700">• No immediate attention items for this cycle.</li>
+                  <li className="text-green-700">• No immediate attention items for this Program Increment.</li>
                 )}
               </ul>
             </div>
@@ -291,100 +333,336 @@ export function AdminControlCentre(props: {
       </section>
 
       {activeTab === 'cycles' && (
-        <div className="space-y-4">
-          <div className="rounded border p-4">
-            <h3 className="font-semibold mb-3">Planning Cycles</h3>
+        <div className="rounded border p-4 space-y-4">
+          <h3 className="font-semibold">Program Increments</h3>
+          <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
+              <colgroup>
+                <col className="w-1/4" />{/* Name ~25% */}
+                <col className="w-1/6" />{/* Start ~17% */}
+                <col className="w-1/6" />{/* End ~17% */}
+                <col className="w-1/12" />{/* Sprints ~8% */}
+                <col className="w-1/12" />{/* Length (days) ~8% */}
+                <col className="w-1/12" />{/* Active ~8% */}
+                <col className="w-1/6" />{/* Actions ~17% */}
+              </colgroup>
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-2 text-left">Name</th><th className="p-2 text-left">Start</th><th className="p-2 text-left">End</th><th className="p-2 text-left">Sprints</th><th className="p-2 text-left">Length (days)</th><th className="p-2 text-left">Active</th><th className="p-2 text-left">Actions</th>
+                  <th className="p-2 text-left">Name</th>
+                  <th className="p-2 text-left">Start</th>
+                  <th className="p-2 text-left">End</th>
+                  <th className="p-2 text-left">Sprints</th>
+                  <th className="p-2 text-left">Length (days)</th>
+                  <th className="p-2 text-left">Active</th>
+                  <th className="p-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {props.planningCycles.map((cycle) => (
-                  <tr key={cycle.id} className="border-t">
-                    <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={cycle.name} onBlur={(e) => submit(() => updatePlanningCycleAction(cycle.id, { name: e.target.value }), 'Cycle updated')} /></td>
-                    <td className="p-2">{cycle.start_date}</td>
-                    <td className="p-2">{cycle.end_date}</td>
-                    <td className="p-2">{cycle.sprint_count}</td>
-                    <td className="p-2">{cycle.sprint_length_days}</td>
-                    <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
-                    <td className="p-2 space-x-2">
-                      <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Cycle marked active')}>Set active</button>
-                      <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Cycle deactivated')}>Deactivate</button>
-                    </td>
-                  </tr>
-                ))}
+                {props.planningCycles.map((cycle) => {
+                  const isEditing = editingCycleId === cycle.id;
+                  const hasImports = (cycleImportCounts[cycle.id] ?? 0) > 0;
+                  const sprintConfigChanged = isEditing && (
+                    editForm.startDate !== cycle.start_date ||
+                    editForm.sprintCount !== cycle.sprint_count ||
+                    editForm.sprintLengthDays !== cycle.sprint_length_days
+                  );
+
+                  if (isEditing) {
+                    return (
+                      <tr key={cycle.id} className="border-t bg-gray-50">
+                        <td className="p-2">
+                          <input className="border rounded px-2 py-1.5 w-full text-sm" value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} />
+                        </td>
+                        <td className="p-2">
+                          <div className="relative group">
+                            <input
+                              className="border rounded px-2 py-1.5 w-full text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                              type="date"
+                              value={editForm.startDate}
+                              disabled={hasImports}
+                              onChange={(e) => { setEditForm((prev) => ({ ...prev, startDate: e.target.value })); setEditPreview([]); setEditPreviewConfirmed(false); setEditPreviewFor(null); }}
+                            />
+                            {hasImports && <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">Cannot change start date after data has been imported</div>}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div className="rounded border border-dashed border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-400 whitespace-nowrap">
+                            {editForm.startDate ? (() => {
+                              const [y, m, d] = editForm.startDate.split('-').map(Number);
+                              const end = new Date(y, m - 1, d + editForm.sprintCount * editForm.sprintLengthDays);
+                              return end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                            })() : '—'}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div className="relative group">
+                            <input
+                              className="border rounded px-2 py-1.5 w-full text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                              type="number"
+                              min={1}
+                              value={editForm.sprintCount}
+                              disabled={hasImports}
+                              onChange={(e) => { setEditForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) })); setEditPreview([]); setEditPreviewConfirmed(false); setEditPreviewFor(null); }}
+                            />
+                            {hasImports && <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">Cannot change sprint count after data has been imported</div>}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div className="relative group">
+                            <input
+                              className="border rounded px-2 py-1.5 w-full text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                              type="number"
+                              min={1}
+                              value={editForm.sprintLengthDays}
+                              disabled={hasImports}
+                              onChange={(e) => { setEditForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) })); setEditPreview([]); setEditPreviewConfirmed(false); setEditPreviewFor(null); }}
+                            />
+                            {hasImports && <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">Cannot change sprint length after data has been imported</div>}
+                          </div>
+                        </td>
+                        <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-1">
+                            {sprintConfigChanged ? (
+                              <button
+                                className="rounded bg-royalRed text-white px-2 py-1 text-xs whitespace-nowrap"
+                                onClick={() => {
+                                  const cycleSprints = props.sprints.filter((s) => s.planning_cycle_id === cycle.id);
+                                  const otherSprints = props.sprints.filter((s) => s.planning_cycle_id !== cycle.id);
+                                  const baseSprintNumber = otherSprints.reduce((max, s) => Math.max(max, s.sprint_number), 0);
+                                  const preview = generateSprintPreview({
+                                    startDate: editForm.startDate,
+                                    sprintCount: editForm.sprintCount,
+                                    sprintLengthDays: editForm.sprintLengthDays,
+                                    latestSprintNumber: baseSprintNumber,
+                                  });
+                                  setEditPreview(preview);
+                                  setEditPreviewConfirmed(false);
+                                  setEditPreviewFor(cycle.id);
+                                }}
+                              >
+                                Preview
+                              </button>
+                            ) : (
+                              <button
+                                className="rounded bg-royalRed text-white p-1 text-xs"
+                                title="Save"
+                                onClick={() => {
+                                  submit(
+                                    () => updatePlanningCycleAction(cycle.id, { name: editForm.name }),
+                                    'Program Increment updated',
+                                  );
+                                  cancelEditCycle();
+                                }}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button
+                              className="rounded bg-gray-700 text-white p-1 text-xs"
+                              title="Cancel"
+                              onClick={cancelEditCycle}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <tr key={cycle.id} className={`border-t transition-colors ${cycle.is_archived ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}`}>
+                      <td className={`p-2 whitespace-nowrap ${cycle.is_archived ? 'line-through text-gray-400' : ''}`}>{cycle.name}</td>
+                      <td className="p-2 whitespace-nowrap">{cycle.start_date}</td>
+                      <td className="p-2 whitespace-nowrap">{cycle.end_date}</td>
+                      <td className="p-2">{cycle.sprint_count}</td>
+                      <td className="p-2">{cycle.sprint_length_days}</td>
+                      <td className="p-2">{cycle.is_active ? 'Yes' : 'No'}</td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            className="rounded bg-gray-200 text-gray-700 p-1 text-xs hover:bg-gray-300 transition-colors"
+                            title="Edit"
+                            onClick={() => startEditCycle(cycle)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {cycle.is_archived ? (
+                            <button
+                              className="rounded bg-gray-200 text-gray-700 p-1 text-xs hover:bg-gray-300 transition-colors"
+                              title="Unarchive"
+                              onClick={() => submit(() => archivePlanningCycleAction(cycle.id, false), 'Program Increment unarchived')}
+                            >
+                              <ArchiveRestore className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <div className="relative group">
+                              <button
+                                className={`rounded bg-gray-200 text-gray-700 p-1 text-xs transition-colors ${cycle.is_active ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'hover:bg-gray-300'}`}
+                                title={cycle.is_active ? 'Deactivate this PI before archiving' : 'Archive'}
+                                onClick={() => setArchiveConfirmId(cycle.id)}
+                              >
+                                <Archive className="h-3.5 w-3.5" />
+                              </button>
+                              {cycle.is_active && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                  Deactivate this PI before archiving
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Program Increment activated')}>Set active</button>
+                          <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Program Increment deactivated')}>Deactivate</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr className="border-t border-gray-200 bg-gray-50">
+                  <td className="p-2">
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" placeholder="e.g. FY26 Q1" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
+                  </td>
+                  <td className="p-2">
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+                  </td>
+                  <td className="p-2">
+                    <div className="rounded border border-dashed border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-400 whitespace-nowrap">
+                      {cycleForm.startDate ? (() => {
+                        const [y, m, d] = cycleForm.startDate.split('-').map(Number);
+                        const end = new Date(y, m - 1, d + cycleForm.sprintCount * cycleForm.sprintLengthDays);
+                        return end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                      })() : '—'}
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
+                  </td>
+                  <td className="p-2">
+                    <input className="border rounded px-2 py-1.5 w-full text-sm" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
+                  </td>
+                  <td className="p-2 text-gray-400">—</td>
+                  <td className="p-2">
+                    <button
+                      className="rounded bg-royalRed text-white px-2 py-1 text-xs whitespace-nowrap"
+                      onClick={() => {
+                        const preview = generateSprintPreview({
+                          startDate: cycleForm.startDate,
+                          sprintCount: cycleForm.sprintCount,
+                          sprintLengthDays: cycleForm.sprintLengthDays,
+                          latestSprintNumber,
+                        });
+                        setCyclePreview(preview);
+                        setPreviewConfirmed(false);
+                      }}
+                    >
+                      Generate Preview
+                    </button>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
 
-          <div className="rounded border p-4 space-y-3">
-            <h3 className="font-semibold">Create New Planning Cycle</h3>
-            <div className="grid md:grid-cols-4 gap-3">
-              <input className="border rounded px-2 py-1" placeholder="Cycle name" value={cycleForm.name} onChange={(e) => setCycleForm((prev) => ({ ...prev, name: e.target.value }))} />
-              <input className="border rounded px-2 py-1" type="date" value={cycleForm.startDate} onChange={(e) => setCycleForm((prev) => ({ ...prev, startDate: e.target.value }))} />
-              <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintCount} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintCount: Number(e.target.value) }))} />
-              <input className="border rounded px-2 py-1" type="number" min={1} value={cycleForm.sprintLengthDays} onChange={(e) => setCycleForm((prev) => ({ ...prev, sprintLengthDays: Number(e.target.value) }))} />
+          {/* Edit sprint preview — shown when sprint config changed on an existing PI */}
+          {editPreviewFor && editPreview.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Sprint Preview — editing {props.planningCycles.find((c) => c.id === editPreviewFor)?.name}</p>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border rounded">
+                  <thead className="bg-gray-100"><tr><th className="p-2 text-left">Sprint</th><th className="p-2 text-left">Start Date</th><th className="p-2 text-left">End Date</th></tr></thead>
+                  <tbody>
+                    {editPreview.map((sprint, idx) => (
+                      <tr className="border-t" key={sprint.sprint_number}>
+                        <td className="p-2"><input className="border-b border-gray-300 bg-transparent px-1 py-0.5 w-full focus:outline-none focus:border-royalRed" value={sprint.name} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, name: e.target.value } : item)))} /></td>
+                        <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
+                        <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setEditPreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={editPreviewConfirmed} onChange={(e) => setEditPreviewConfirmed(e.target.checked)} /> I confirm this sprint preview</label>
+              <div className="flex gap-2">
+                <button
+                  className="rounded bg-royalRed text-white px-3 py-1.5 text-sm disabled:opacity-50"
+                  disabled={!editPreviewConfirmed}
+                  onClick={() => {
+                    const endDate = editPreview[editPreview.length - 1]?.end_date ?? editForm.startDate;
+                    submit(
+                      () =>
+                        updatePlanningCycleWithSprintsAction({
+                          id: editPreviewFor,
+                          cycle: {
+                            name: editForm.name,
+                            start_date: editForm.startDate,
+                            end_date: endDate,
+                            sprint_count: editForm.sprintCount,
+                            sprint_length_days: editForm.sprintLengthDays,
+                          },
+                          sprints: editPreview,
+                        }),
+                      'Program Increment updated',
+                    );
+                    cancelEditCycle();
+                  }}
+                >
+                  Save Program Increment
+                </button>
+                <button
+                  className="rounded bg-gray-700 text-white px-3 py-1.5 text-sm"
+                  onClick={cancelEditCycle}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <button
-              className="rounded bg-royalRed text-white px-3 py-1 text-sm"
-              onClick={() => {
-                const preview = generateSprintPreview({
-                  startDate: cycleForm.startDate,
-                  sprintCount: cycleForm.sprintCount,
-                  sprintLengthDays: cycleForm.sprintLengthDays,
-                  latestSprintNumber,
-                });
-                setCyclePreview(preview);
-                setPreviewConfirmed(false);
-              }}
-            >
-              Generate Sprint Preview
-            </button>
+          )}
 
-            {!!cyclePreview.length && (
-              <div className="space-y-2">
+          {/* Create sprint preview — shown when creating a new PI */}
+          {!!cyclePreview.length && (
+            <div className="space-y-2">
+              <div className="overflow-x-auto">
                 <table className="min-w-full text-sm border rounded">
                   <thead className="bg-gray-100"><tr><th className="p-2 text-left">Sprint</th><th className="p-2 text-left">Start Date</th><th className="p-2 text-left">End Date</th></tr></thead>
                   <tbody>
                     {cyclePreview.map((sprint, idx) => (
                       <tr className="border-t" key={sprint.sprint_number}>
-                        <td className="p-2">{sprint.name}</td>
+                        <td className="p-2"><input className="border-b border-gray-300 bg-transparent px-1 py-0.5 w-full focus:outline-none focus:border-royalRed" value={sprint.name} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, name: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.start_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, start_date: e.target.value } : item)))} /></td>
                         <td className="p-2"><input type="date" className="border rounded px-2 py-1" value={sprint.end_date} onChange={(e) => setCyclePreview((prev) => prev.map((item, i) => (i === idx ? { ...item, end_date: e.target.value } : item)))} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={previewConfirmed} onChange={(e) => setPreviewConfirmed(e.target.checked)} /> I confirm this sprint preview</label>
-                <button
-                  className="rounded bg-royalRed text-white px-3 py-1 text-sm disabled:opacity-50"
-                  disabled={!previewConfirmed || !cyclePreview.length}
-                  onClick={() => {
-                    const endDate = cyclePreview[cyclePreview.length - 1]?.end_date ?? cycleForm.startDate;
-                    submit(
-                      () =>
-                        savePlanningCycleAction({
-                          cycle: {
-                            name: cycleForm.name,
-                            start_date: cycleForm.startDate,
-                            end_date: endDate,
-                            sprint_count: cycleForm.sprintCount,
-                            sprint_length_days: cycleForm.sprintLengthDays,
-                            is_active: props.planningCycles.length === 0,
-                          },
-                          sprints: cyclePreview,
-                        }),
-                      'Cycle created',
-                    );
-                  }}
-                >
-                  Save Planning Cycle
-                </button>
               </div>
-            )}
-          </div>
+              <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={previewConfirmed} onChange={(e) => setPreviewConfirmed(e.target.checked)} /> I confirm this sprint preview</label>
+              <button
+                className="rounded bg-royalRed text-white px-3 py-1.5 text-sm disabled:opacity-50"
+                disabled={!previewConfirmed || !cyclePreview.length}
+                onClick={() => {
+                  const endDate = cyclePreview[cyclePreview.length - 1]?.end_date ?? cycleForm.startDate;
+                  submit(
+                    () =>
+                      savePlanningCycleAction({
+                        cycle: {
+                          name: cycleForm.name,
+                          start_date: cycleForm.startDate,
+                          end_date: endDate,
+                          sprint_count: cycleForm.sprintCount,
+                          sprint_length_days: cycleForm.sprintLengthDays,
+                          is_active: props.planningCycles.length === 0,
+                        },
+                        sprints: cyclePreview,
+                      }),
+                    'Program Increment created',
+                  );
+                }}
+              >
+                Save Program Increment
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -437,7 +715,7 @@ export function AdminControlCentre(props: {
           </div>
 
           <div className="flex items-center gap-2 text-sm">
-            <label>Planning cycle:</label>
+            <label>Program Increment:</label>
             <select className="border rounded px-2 py-1" value={selectedTeamCycle} onChange={(e) => setSelectedTeamCycle(e.target.value)}>
               {props.planningCycles.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.name}</option>)}
             </select>
@@ -471,7 +749,7 @@ export function AdminControlCentre(props: {
             <button className="rounded bg-royalRed px-3 py-1 text-white text-sm" onClick={() => submit(() => createInitiativeAction({ name: newInitiative.name, art_id: newInitiative.art_id || null, planning_cycle_id: selectedInitiativeCycle, is_active: true }), 'Initiative created')}>Add Initiative</button>
           </div>
 
-          <table className="min-w-full text-sm"><thead className="bg-gray-100"><tr><th className="p-2 text-left">Name</th><th className="p-2 text-left">ART</th><th className="p-2 text-left">Cycle</th><th className="p-2 text-left">Status</th></tr></thead><tbody>
+          <table className="min-w-full text-sm"><thead className="bg-gray-100"><tr><th className="p-2 text-left">Name</th><th className="p-2 text-left">ART</th><th className="p-2 text-left">PI</th><th className="p-2 text-left">Status</th></tr></thead><tbody>
             {props.initiatives.filter((initiative) => initiative.planning_cycle_id === selectedInitiativeCycle).map((initiative) => (
               <tr key={initiative.id} className="border-t">
                 <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={initiative.name} onBlur={(e) => submit(() => updateInitiativeAction(initiative.id, { name: e.target.value }), 'Initiative updated')} /></td>
@@ -493,7 +771,6 @@ export function AdminControlCentre(props: {
               <select className="border rounded px-2 py-1" value={selectedImportCycle} onChange={(e) => setSelectedImportCycle(e.target.value)}>
                 {props.planningCycles.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.name}</option>)}
               </select>
-              <input className="border rounded px-2 py-1" placeholder="Source system" value={csvState.sourceSystem} onChange={(e) => setCsvState((prev) => ({ ...prev, sourceSystem: e.target.value }))} />
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -507,7 +784,7 @@ export function AdminControlCentre(props: {
                     const guess = parsed.headers.find((header) => header.toLowerCase() === field.toLowerCase());
                     if (guess) initialMappings[field] = guess;
                   });
-                  setCsvState({ fileName: file.name, headers: parsed.headers, rows: parsed.rows, mappings: initialMappings, sourceSystem: csvState.sourceSystem });
+                  setCsvState({ fileName: file.name, headers: parsed.headers, rows: parsed.rows, mappings: initialMappings });
                 }}
               />
             </div>
@@ -555,7 +832,6 @@ export function AdminControlCentre(props: {
                         runImportAction({
                           planningCycleId: selectedImportCycle,
                           fileName: csvState.fileName,
-                          sourceSystem: csvState.sourceSystem,
                           validRows: validation.validMappedRows,
                           warningCount: validation.warnings.length,
                           totalRows: validation.totalRows,
@@ -576,7 +852,6 @@ export function AdminControlCentre(props: {
                         runImportAction({
                           planningCycleId: selectedImportCycle,
                           fileName: csvState.fileName,
-                          sourceSystem: csvState.sourceSystem,
                           validRows: mappedRows,
                           warningCount: validation.warnings.length,
                           totalRows: validation.totalRows,
@@ -619,6 +894,39 @@ export function AdminControlCentre(props: {
           </div>
         </div>
       )}
+
+      {/* Archive confirmation dialog */}
+      {archiveConfirmId && (() => {
+        const cycle = props.planningCycles.find((c) => c.id === archiveConfirmId);
+        if (!cycle) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded border border-gray-200 shadow-lg p-6 max-w-sm w-full mx-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Archive {cycle.name}?</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                This hides the Program Increment from cycle pickers across the app. No data is deleted. You can unarchive it at any time.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="rounded bg-royalRed text-white px-3 py-1.5 text-sm hover:opacity-90 transition-opacity"
+                  onClick={() => {
+                    submit(() => archivePlanningCycleAction(archiveConfirmId, true), 'Program Increment archived');
+                    setArchiveConfirmId(null);
+                  }}
+                >
+                  Archive
+                </button>
+                <button
+                  className="rounded bg-gray-200 text-gray-700 px-3 py-1.5 text-sm hover:bg-gray-300 transition-colors"
+                  onClick={() => setArchiveConfirmId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function LiveDashboard({ initialData }: Props) {
   if (!data.cycle) {
     return (
       <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-6 text-sm text-gray-700">
-        No active planning cycle configured. Create or activate a cycle in Admin
+        No active Program Increment configured. Create or activate one in Admin
         Control Centre.
       </div>
     );
@@ -66,7 +66,7 @@ export function LiveDashboard({ initialData }: Props) {
               readiness
             </p>
             <p className="mt-2 text-sm text-gray-700">
-              <span className="font-semibold">Cycle:</span> {data.cycle.name} (
+              <span className="font-semibold">PI:</span> {data.cycle.name} (
               {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} -{' '}
               {new Date(data.cycle.end_date).toLocaleDateString('en-GB')})
             </p>
@@ -154,7 +154,7 @@ export function LiveDashboard({ initialData }: Props) {
           ))}
           {!data.artTiles.length && (
             <p className="text-sm text-gray-500">
-              No ART data found for this cycle.
+              No ART data found for this Program Increment.
             </p>
           )}
         </div>
@@ -220,7 +220,7 @@ export function LiveDashboard({ initialData }: Props) {
             ))}
             {!data.sprintDistribution.length && (
               <p className="text-sm text-gray-500">
-                No sprints configured for this cycle.
+                No sprints configured for this Program Increment.
               </p>
             )}
           </div>
@@ -344,7 +344,7 @@ export function LiveDashboard({ initialData }: Props) {
             ))}
             {!data.activity.length && (
               <li className="text-gray-500">
-                No activity events recorded for this cycle.
+                No activity events recorded for this Program Increment.
               </li>
             )}
           </ul>

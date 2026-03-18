@@ -13,7 +13,7 @@
 Active work — tackle these before anything else.
 
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
-- [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
+- [x] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
   - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text
@@ -23,6 +23,8 @@ Active work — tackle these before anything else.
 - [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
 - [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
 - [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
+- [x] Admin header — planning header hidden on `/admin` and `/help` routes (no DispatchShell header injected)
+- [x] Bulk Triage — "⚠ Not yet connected to live data" warning banner added
 - [x] Admin header — planning header hidden on `/admin` and `/help`
 - [x] Bulk Triage — "⚠ Not yet connected to live data" banner added
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
@@ -165,8 +167,8 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
 - `stories.commitment_status` — derive from parent feature instead
 
 **UI label updates:**
-- All "Planning Cycle" text → "Program Increment"
-- All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"
+- ~~All "Planning Cycle" text → "Program Increment"~~ ✅ Done
+- ~~All "Cycle" references in nav, headers, Admin → "Program Increment" or "PI"~~ ✅ Done
 
 **Code renames — full codebase sweep:**
 - `lib/admin/planningCycles.ts` → `lib/admin/programIncrements.ts`
@@ -494,10 +496,10 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
   - Add semantic tokens to `tailwind.config.ts`
   - Candidates: `surface`, `border`, `textPrimary`, `textMuted`, `success`, `warning`
 
-- [ ] **`isArchived` flag on `planning_cycles`**
-  - Currently only `is_active` exists
-  - Add `is_archived` so old cycles can be hidden from pickers without deletion
-  - Requires DB migration + Admin UI toggle
+- [x] **`isArchived` flag on `planning_cycles`**
+  - Column added in Schema Phase 1
+  - Archive/unarchive implemented in Admin PI table (Archive icon, confirmation dialog, muted row, Unarchive button)
+  - Archived PIs excluded from cycle pickers across the app: separate task (see P3 cycle switcher)
 
 - [ ] **Sorting Frame visual hierarchy**
   - Initiative sections as distinct bordered containers

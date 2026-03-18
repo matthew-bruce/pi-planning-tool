@@ -18,6 +18,8 @@ const planningNavItems = [
 export function DispatchShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isHelp = pathname === '/help' || pathname.startsWith('/help/');
+  const showPlanningHeader = !isAdmin && !isHelp;
 
   const {
     arts,
@@ -105,7 +107,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="min-w-0">
-        {!isAdmin ? (
+        {showPlanningHeader && (
           <header className="flex flex-wrap items-center gap-4 border-b border-gray-200 p-4">
             <div className="flex items-center gap-2">
               {arts.map((art) => (
@@ -154,27 +156,6 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
               >
                 Detailed
               </button>
-            </div>
-          </header>
-        ) : (
-          <header className="border-b border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Admin Control Centre
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Configure cycles, sprints, ARTs, platforms, teams,
-                  initiatives, and imports.
-                </p>
-              </div>
-
-              <Link
-                href="/sorting-frame"
-                className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Return to planning
-              </Link>
             </div>
           </header>
         )}
