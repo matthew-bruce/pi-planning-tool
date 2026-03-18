@@ -459,10 +459,10 @@ Run via Claude Code on a dedicated feature branch AFTER Phase 1 is stable and de
   - Add semantic tokens to `tailwind.config.ts`
   - Candidates: `surface`, `border`, `textPrimary`, `textMuted`, `success`, `warning`
 
-- [ ] **`isArchived` flag on `planning_cycles`**
-  - Currently only `is_active` exists
-  - Add `is_archived` so old cycles can be hidden from pickers without deletion
-  - Requires DB migration + Admin UI toggle
+- [x] **`isArchived` flag on `planning_cycles`**
+  - Column added in Schema Phase 1
+  - Archive/unarchive implemented in Admin PI table (Archive icon, confirmation dialog, muted row, Unarchive button)
+  - Archived PIs excluded from cycle pickers across the app: separate task (see P3 cycle switcher)
 
 - [ ] **Sorting Frame visual hierarchy**
   - Initiative sections as distinct bordered containers

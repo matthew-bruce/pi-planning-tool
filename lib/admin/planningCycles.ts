@@ -131,6 +131,16 @@ export async function updatePlanningCycleWithSprints(payload: {
   return { error: undefined };
 }
 
+export async function archivePlanningCycle(id: string, isArchived: boolean) {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from('planning_cycles')
+    .update({ is_archived: isArchived })
+    .eq('id', id);
+
+  return { error: error?.message };
+}
+
 export async function markCycleActive(cycleId: string) {
   const supabase = getSupabaseServerClient();
 

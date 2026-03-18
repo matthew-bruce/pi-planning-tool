@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { Pencil, Check, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, Pencil, X } from 'lucide-react';
 import {
   createArtAction,
   createInitiativeAction,
   createPlatformAction,
   createTeamAction,
+  archivePlanningCycleAction,
   markCycleActiveAction,
   rollbackLatestImportAction,
   runImportAction,
@@ -100,6 +101,7 @@ export function AdminControlCentre(props: {
   const [editForm, setEditForm] = useState({ name: '', startDate: '', sprintCount: 0, sprintLengthDays: 0 });
   const [editPreview, setEditPreview] = useState<GeneratedSprintPreview[]>([]);
   const [editPreviewConfirmed, setEditPreviewConfirmed] = useState(false);
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
 
   const latestSprintNumber = useMemo(() => getLatestSprintNumber(props.sprints), [props.sprints]);
 
@@ -471,8 +473,8 @@ export function AdminControlCentre(props: {
                   }
 
                   return (
-                    <tr key={cycle.id} className="border-t hover:bg-gray-50 transition-colors">
-                      <td className="p-2 whitespace-nowrap">{cycle.name}</td>
+                    <tr key={cycle.id} className={`border-t transition-colors ${cycle.is_archived ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}`}>
+                      <td className={`p-2 whitespace-nowrap ${cycle.is_archived ? 'line-through text-gray-400' : ''}`}>{cycle.name}</td>
                       <td className="p-2 whitespace-nowrap">{cycle.start_date}</td>
                       <td className="p-2 whitespace-nowrap">{cycle.end_date}</td>
                       <td className="p-2">{cycle.sprint_count}</td>
@@ -487,6 +489,30 @@ export function AdminControlCentre(props: {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
+                          {cycle.is_archived ? (
+                            <button
+                              className="rounded bg-gray-200 text-gray-700 p-1 text-xs hover:bg-gray-300 transition-colors"
+                              title="Unarchive"
+                              onClick={() => submit(() => archivePlanningCycleAction(cycle.id, false), 'Program Increment unarchived')}
+                            >
+                              <ArchiveRestore className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <div className="relative group">
+                              <button
+                                className={`rounded bg-gray-200 text-gray-700 p-1 text-xs transition-colors ${cycle.is_active ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'hover:bg-gray-300'}`}
+                                title={cycle.is_active ? 'Deactivate this PI before archiving' : 'Archive'}
+                                onClick={() => setArchiveConfirmId(cycle.id)}
+                              >
+                                <Archive className="h-3.5 w-3.5" />
+                              </button>
+                              {cycle.is_active && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                  Deactivate this PI before archiving
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <button className="text-xs rounded bg-royalRed text-white px-2 py-1" onClick={() => submit(() => markCycleActiveAction(cycle.id), 'Program Increment activated')}>Set active</button>
                           <button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updatePlanningCycleAction(cycle.id, { is_active: false }), 'Program Increment deactivated')}>Deactivate</button>
                         </div>
@@ -872,6 +898,39 @@ export function AdminControlCentre(props: {
           </div>
         </div>
       )}
+
+      {/* Archive confirmation dialog */}
+      {archiveConfirmId && (() => {
+        const cycle = props.planningCycles.find((c) => c.id === archiveConfirmId);
+        if (!cycle) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded border border-gray-200 shadow-lg p-6 max-w-sm w-full mx-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Archive {cycle.name}?</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                This hides the Program Increment from cycle pickers across the app. No data is deleted. You can unarchive it at any time.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="rounded bg-royalRed text-white px-3 py-1.5 text-sm hover:opacity-90 transition-opacity"
+                  onClick={() => {
+                    submit(() => archivePlanningCycleAction(archiveConfirmId, true), 'Program Increment archived');
+                    setArchiveConfirmId(null);
+                  }}
+                >
+                  Archive
+                </button>
+                <button
+                  className="rounded bg-gray-200 text-gray-700 px-3 py-1.5 text-sm hover:bg-gray-300 transition-colors"
+                  onClick={() => setArchiveConfirmId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
