@@ -1,3 +1,4 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { CsvMappedRow, ImportSnapshot } from '@/lib/admin/types';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { buildValueStreamResolutionPlan, ValueStreamSnapshotRow } from '@/lib/admin/importHelpers';
@@ -249,8 +250,7 @@ export async function rebuildLiveTablesFromSnapshots(planningCycleId: string) {
  * update features.initiative_id and features.team_id.
  */
 async function resolveValueStreamsAndTeams(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  supabase: SupabaseClient,
   planningCycleId: string,
   snapshotFeatures: Record<string, unknown>[],
 ): Promise<string | null> {
