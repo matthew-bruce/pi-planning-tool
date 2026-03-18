@@ -143,7 +143,7 @@ export async function runImportAction(payload: {
   const snapshot = await createImportSnapshot({
     planning_cycle_id: payload.planningCycleId,
     file_name: payload.fileName,
-    source_system: 'csv_import',
+    source_system: 'CSV',
     row_count: payload.totalRows,
     status: 'imported',
   });
