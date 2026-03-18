@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
+import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
 
 const planningNavItems = [
   { href: '/sorting-frame', label: 'Sorting Frame' },
   { href: '/team-planning', label: 'Team Planning Room' },
   { href: '/dependencies', label: 'Dependencies Near You' },
   { href: '/dashboard', label: 'Live Dashboard' },
+  { href: '/activity', label: 'Activity' },
   { href: '/triage', label: 'Bulk Triage' },
   { href: '/help', label: 'Help' },
 ];
@@ -20,6 +22,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const isHelp = pathname === '/help' || pathname.startsWith('/help/');
   const showPlanningHeader = !isAdmin && !isHelp;
+  const showActivityPanel = !isAdmin && !isHelp;
 
   const {
     arts,
@@ -55,13 +58,31 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr]">
-      <aside className="flex min-h-screen flex-col border-r border-gray-200 bg-gray-50 p-4">
-        <div className="mb-6">
+      {/* ── Sidebar ── */}
+      <aside className="flex min-h-screen flex-col border-r border-gray-200 bg-white p-4">
+        <div className="mb-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/Royal_Mail_logo_2024.svg"
+            alt="Royal Mail"
+            height="28"
+            style={{ height: 28 }}
+            className="mb-2"
+          />
           <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
           <p className="mt-1 text-xs text-gray-500">
             PI Planning orchestration
           </p>
         </div>
+
+        {/* Royal Mail stripe accent */}
+        <div
+          className="my-4 h-1 w-full rounded-full"
+          style={{
+            background:
+              'linear-gradient(to right, #EE2722, #EE2722, #FDDD1C, #f97316, #fca5a5)',
+          }}
+        />
 
         <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
           Planning
@@ -106,61 +127,138 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-w-0">
+      {/* ── Main content area ── */}
+      <div className="relative min-w-0">
+        {/* Demo Mode amber banner */}
+        {demoMode && showPlanningHeader && (
+          <div className="px-4 py-1.5 text-center text-xs font-semibold" style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}>
+            Demo Mode — simulated data is active
+          </div>
+        )}
+
+        {/* Planning header — royalRed background */}
         {showPlanningHeader && (
-          <header className="flex flex-wrap items-center gap-4 border-b border-gray-200 p-4">
-            <div className="flex items-center gap-2">
-              {arts.map((art) => (
-                <button
-                  key={art.id}
-                  onClick={() => setSelectedArtId(art.id)}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    selectedArtId === art.id
-                      ? 'border-royalRed bg-royalRed text-white'
-                      : 'border-gray-300'
-                  }`}
-                >
-                  {art.name}
-                </button>
-              ))}
+          <header
+            className="relative flex flex-wrap items-center gap-4 p-4 overflow-hidden"
+            style={{ backgroundColor: '#EE2722' }}
+          >
+            {/* Diagonal stripe watermark */}
+            <div className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden" style={{ width: 220, zIndex: 0 }}>
+              <svg
+                width="220"
+                height="100%"
+                viewBox="0 0 220 80"
+                preserveAspectRatio="none"
+                style={{ transform: 'rotate(-25deg)', transformOrigin: 'center center', width: '140%', height: '200%', position: 'absolute', top: '-50%', right: '-20%' }}
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <rect
+                    key={i}
+                    x={i * 18}
+                    y="0"
+                    width="9"
+                    height="200"
+                    fill={i % 2 === 0 ? '#ffffff' : '#FDDD1C'}
+                    opacity="0.12"
+                  />
+                ))}
+              </svg>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <span>Demo Mode</span>
-              <input
-                type="checkbox"
-                checked={demoMode}
-                onChange={(e) => setDemoMode(e.target.checked)}
-              />
-            </label>
+            {/* Header controls — above watermark */}
+            <div className="relative flex flex-wrap items-center gap-4" style={{ zIndex: 1 }}>
+              {/* ART selector buttons */}
+              <div className="flex items-center gap-2">
+                {arts.map((art) => (
+                  <button
+                    key={art.id}
+                    onClick={() => setSelectedArtId(art.id)}
+                    className="rounded-full border px-3 py-1 text-sm transition-colors"
+                    style={
+                      selectedArtId === art.id
+                        ? { backgroundColor: '#ffffff', color: '#EE2722', borderColor: '#ffffff' }
+                        : { backgroundColor: 'transparent', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)' }
+                    }
+                  >
+                    {art.name}
+                  </button>
+                ))}
+              </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <span>Density</span>
-              <button
-                onClick={() => setDensity('compact')}
-                className={`rounded px-2 py-1 ${
-                  density === 'compact'
-                    ? 'bg-royalRed text-white'
-                    : 'bg-gray-100'
-                }`}
+              {/* Divider */}
+              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
+
+              {/* Stage indicator pill */}
+              <span
+                className="rounded-full px-3 py-1 text-xs font-medium"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: '#ffffff',
+                }}
               >
-                Compact
-              </button>
-              <button
-                onClick={() => setDensity('detailed')}
-                className={`rounded px-2 py-1 ${
-                  density === 'detailed'
-                    ? 'bg-royalRed text-white'
-                    : 'bg-gray-100'
-                }`}
-              >
-                Detailed
-              </button>
+                Planning
+              </span>
+
+              {/* Divider */}
+              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
+
+              {/* Demo Mode chip */}
+              <label className="flex items-center gap-2 text-sm">
+                {demoMode && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                    style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
+                  >
+                    Demo
+                  </span>
+                )}
+                <span className="text-white">Demo Mode</span>
+                <input
+                  type="checkbox"
+                  checked={demoMode}
+                  onChange={(e) => setDemoMode(e.target.checked)}
+                  className="accent-white"
+                />
+              </label>
+
+              {/* Divider */}
+              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
+
+              {/* Density toggle */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-white">Density</span>
+                <button
+                  onClick={() => setDensity('compact')}
+                  className="rounded px-2 py-1 text-sm transition-colors"
+                  style={
+                    density === 'compact'
+                      ? { backgroundColor: '#ffffff', color: '#EE2722' }
+                      : { backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }
+                  }
+                >
+                  Compact
+                </button>
+                <button
+                  onClick={() => setDensity('detailed')}
+                  className="rounded px-2 py-1 text-sm transition-colors"
+                  style={
+                    density === 'detailed'
+                      ? { backgroundColor: '#ffffff', color: '#EE2722' }
+                      : { backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }
+                  }
+                >
+                  Detailed
+                </button>
+              </div>
             </div>
           </header>
         )}
 
         <main className="p-4">{children}</main>
+
+        {/* Activity Feed Panel — right edge */}
+        {showActivityPanel && <ActivityFeedPanel />}
       </div>
     </div>
   );

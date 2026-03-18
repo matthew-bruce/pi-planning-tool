@@ -702,58 +702,39 @@ These emerged during product thinking sessions and are worth revisiting. Not yet
 
 These were identified after the first successful load of the gold demo dataset.
 
-- [ ] **Design system — extend Tailwind tokens**
-  - Update `royalRed` from `#CC0000` to `#EE2722` (official RMG brand red)
-  - Add `royalYellow: '#FDDD1C'` (official RMG brand yellow — for warnings, Demo Mode banner)
-  - Add semantic status tokens: `success`, `warning`, `danger`, `neutral`
-  - Add surface tokens: `surface`, `surfaceSubtle`, `border`, `textPrimary`, `textMuted`
-  - Add Value Stream accent palette: `vs1` through `vs8` (light pastel tints for board section backgrounds)
-  - All changes in `tailwind.config.ts` only — no arbitrary hex values anywhere
+- [x] **Design system — extend Tailwind tokens**
+  - Updated `royalRed` to `#EE2722`, added `royalYellow`, semantic tokens, surface tokens, vs1–vs8 palette
+  - All in `tailwind.config.ts`
 
-- [ ] **Dashboard — contextual colour coding**
-  - KPI cards: colour-code values against thresholds (green/amber/red)
-  - High criticality dependencies: always red regardless of count
-  - Teams with fresh data: red when 0 during an active event
-  - ART convergence tiles: colour by convergence % (0-50% red, 50-75% amber, 75%+ green)
-  - Sprint distribution bars: colour by load (under/balanced/overloaded)
-  - Convergence gauge: show stage-appropriate target marker
+- [x] **RMG branding — sidebar & planning header**
+  - Royal Mail logo in sidebar, Royal Mail stripe accent bar
+  - Planning header: royalRed background, white text, diagonal stripe watermark, adapted controls
 
-- [ ] **Sorting Frame — Value Stream visual differentiation**
-  - Each Value Stream section gets a tinted background from the `vs1`–`vs8` palette
-  - Assigned consistently (same VS always gets same colour within a session)
-  - Colour is subtle — tints the section header and background, doesn't overpower cards
-  - Team swimlane headers more visually prominent
+- [x] **Dashboard — contextual colour coding**
+  - KPI cards with coloured left borders (green/amber/red) based on thresholds
+  - ART convergence tiles with colour-coded convergence badges (0–50% red, 50–75% amber, ≥75% green)
+  - Remaining: Sprint distribution load colours, convergence stage marker (future)
 
-- [ ] **Feature cards — status pills and dependency badges**
+- [x] **Sorting Frame — Value Stream visual differentiation**
+  - vs1–vs8 palette applied to Value Stream sections (deterministic by array index)
+  - VS section header and background tinted; feature cards remain white
+  - Team swimlane headers: white, font-weight 500, VS-colour left border
+
+- [x] **Feature cards — status pills and dependency badges**
   - Commitment status pills: Draft (gray), Planned (blue), Committed (green)
-  - Dependency badges: colour by criticality — High (red), Medium (amber), Low (green)
-  - Story count icon — clarify what it means visually
-  - Icon key — accessible via a persistent (?) or (i) button near the board
+  - Dependency badges coloured by highest criticality (conflict→red, blocks→amber, requires→green)
+  - Story count with tooltip; source system badge (JIRA/ADO)
+  - Remaining: icon key near board (future)
 
-- [ ] **Global Activity Feed panel**
-  - Collapsible right-side panel accessible from ALL planning pages (not Admin/Help)
-  - Collapsed state: thin tab on right edge with live notification dot for new events
-  - Expanded state: slides in 320px from right, overlays content without reflowing layout
-  - Open/closed state persisted in localStorage per session
-  - Event type colour coding via left border:
-    - Feature activity — blue `#3b82f6`
-    - Dependency events — amber `#d97706`
-    - Import activity — purple `#7c3aed`
-    - Risks & attention — red `#dc2626`
-    - Planning progress — green `#16a34a`
-    - System — gray `#6b7280`
-  - **Navigation — no scrollbar:**
-    - Feed loads with most recent events at top
-    - "↑ Back to latest" pill button appears when scrolled down
-    - "N new events ↑" badge when new events arrive while scrolled down
-    - Smooth scroll animation — no visible scrollbar (scrollbar-hide)
-  - Filter chips at top of panel matching event taxonomy
-  - "Open full screen →" link at bottom
+- [x] **Global Activity Feed panel** (`components/ActivityFeedPanel.tsx`)
+  - Collapsible right-side panel on all planning pages (not Admin/Help)
+  - Collapsed tab with unread notification dot; expanded 300px overlay panel
+  - Filter chips (All/Features/Dependencies/Imports/Risks/Progress/System)
+  - Left-border colour coding per event category; relative timestamps
+  - "↑ Latest" pill when scrolled; "N new" badge on new arrivals while scrolled
+  - No visible scrollbar; localStorage persistence; 30s polling; "Open full screen →" link
 
-- [ ] **Standalone Activity Feed page (`/activity`)**
-  - Full-screen layout — feed takes full width, larger text, more breathing room
-  - Designed to be projected on a wall or second monitor during PI Planning
-  - Auto-refreshes in real time — no manual refresh
-  - Same filter chips as panel version
-  - Link from Activity Feed panel: "Open full screen →"
-  - Accessible without login during PoC phase
+- [x] **Standalone Activity Feed page** (`app/activity/page.tsx`)
+  - Full-screen feed at `/activity`; max-w-3xl centred; auto-refreshes every 30s
+  - Same filter chips and colour coding as panel; "↑ Latest" pill on scroll
+  - Added "Activity" nav item in DispatchShell sidebar

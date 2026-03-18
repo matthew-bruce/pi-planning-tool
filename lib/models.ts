@@ -38,6 +38,7 @@ export type Feature = {
   sourceUrl?: string | null;
   commitmentStatus?: string | null;
   status?: string | null;
+  sourceSystem?: string | null;
   storyCount: number;
   dependencyCounts: DependencyCounts;
 };

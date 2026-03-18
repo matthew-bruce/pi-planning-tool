@@ -15,6 +15,22 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 
 type Props = { initialData: SortingFrameData };
 
+// Value Stream colour palette — vs1–vs8
+const VS_COLOURS = [
+  { bg: '#dbeafe', text: '#1d4ed8' }, // vs1
+  { bg: '#dcfce7', text: '#15803d' }, // vs2
+  { bg: '#fef9c3', text: '#a16207' }, // vs3
+  { bg: '#fce7f3', text: '#9d174d' }, // vs4
+  { bg: '#ede9fe', text: '#6d28d9' }, // vs5
+  { bg: '#ffedd5', text: '#c2410c' }, // vs6
+  { bg: '#cffafe', text: '#0e7490' }, // vs7
+  { bg: '#f1f5f9', text: '#475569' }, // vs8
+];
+
+function getVsColour(index: number) {
+  return VS_COLOURS[index % VS_COLOURS.length];
+}
+
 export function SortingFrameBoard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
@@ -261,16 +277,20 @@ export function SortingFrameBoard({ initialData }: Props) {
               </div>
             </section>
           ) : (
-            filteredInitiatives.map((initiative) => {
+            filteredInitiatives.map((initiative, initiativeIndex) => {
+              const vsColour = getVsColour(initiativeIndex);
               const collapsed = collapsedInitiatives[initiative.id];
 
               return (
                 <section
                   key={initiative.id}
-                  className="rounded border border-gray-200 bg-white"
+                  className="rounded border overflow-hidden"
+                  style={{ borderColor: vsColour.bg, backgroundColor: vsColour.bg }}
                 >
+                  {/* Value Stream section header */}
                   <button
-                    className="flex w-full items-center justify-between bg-gray-50 p-2 text-left"
+                    className="flex w-full items-center justify-between p-2 text-left"
+                    style={{ backgroundColor: vsColour.bg }}
                     onClick={() =>
                       setCollapsedInitiatives((prev) => ({
                         ...prev,
@@ -278,8 +298,10 @@ export function SortingFrameBoard({ initialData }: Props) {
                       }))
                     }
                   >
-                    <span className="font-semibold">{initiative.name}</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-semibold" style={{ color: vsColour.text }}>
+                      {initiative.name}
+                    </span>
+                    <span className="text-xs" style={{ color: vsColour.text, opacity: 0.8 }}>
                       Teams {initiative.summary.teamsCount} • Features{' '}
                       {initiative.summary.featuresCount} • Deps{' '}
                       {initiative.summary.dependencyCount} • Conflicts{' '}
@@ -295,8 +317,14 @@ export function SortingFrameBoard({ initialData }: Props) {
 
                         return (
                           <div key={team.id}>
+                            {/* Team swimlane header — white bg, VS colour left border */}
                             <button
-                              className="mb-2 flex w-full items-center justify-between rounded border border-gray-200 bg-white px-2 py-1 text-left"
+                              className="mb-2 flex w-full items-center justify-between rounded border border-gray-200 bg-white px-3 py-1.5 text-left"
+                              style={{
+                                borderLeftWidth: 3,
+                                borderLeftColor: vsColour.text,
+                                fontWeight: 500,
+                              }}
                               onClick={() =>
                                 setCollapsedTeams((prev) => ({
                                   ...prev,
@@ -304,9 +332,9 @@ export function SortingFrameBoard({ initialData }: Props) {
                                 }))
                               }
                             >
-                              <span className="text-sm font-semibold">
+                              <span className="text-sm font-medium text-gray-800">
                                 {team.name}{' '}
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 font-normal">
                                   ({team.platform})
                                 </span>
                               </span>

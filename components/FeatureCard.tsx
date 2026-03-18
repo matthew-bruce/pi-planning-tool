@@ -8,6 +8,33 @@ type FeatureCardProps = {
   feature: Feature;
 };
 
+function getStatusPill(status: string | null | undefined) {
+  const s = (status ?? '').toLowerCase();
+  if (s === 'committed') return { label: 'Committed', cls: 'bg-green-100 text-green-700' };
+  if (s === 'planned')   return { label: 'Planned',   cls: 'bg-blue-100 text-blue-700' };
+  return                        { label: 'Draft',     cls: 'bg-gray-100 text-gray-600' };
+}
+
+function getDepBadge(counts: Feature['dependencyCounts']) {
+  const total = counts.requires + counts.blocks + counts.conflict;
+  if (total === 0) return null;
+
+  let cls = 'bg-gray-100 text-gray-600';
+  if (counts.conflict > 0)      cls = 'bg-red-100 text-red-700';
+  else if (counts.blocks > 0)   cls = 'bg-amber-100 text-amber-700';
+  else if (counts.requires > 0) cls = 'bg-green-100 text-green-700';
+
+  return { total, cls };
+}
+
+function getSourceBadge(sourceSystem: string | null | undefined) {
+  if (!sourceSystem) return null;
+  const s = sourceSystem.toLowerCase();
+  if (s.includes('jira')) return 'JIRA';
+  if (s.includes('ado') || s.includes('azure')) return 'ADO';
+  return sourceSystem.toUpperCase().slice(0, 6);
+}
+
 export function FeatureCard({ feature }: FeatureCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
@@ -20,10 +47,9 @@ export function FeatureCard({ feature }: FeatureCardProps) {
     transition,
   };
 
-  const dependencyCount =
-    (feature.dependencyCounts?.requires ?? 0) +
-    (feature.dependencyCounts?.blocks ?? 0) +
-    (feature.dependencyCounts?.conflict ?? 0);
+  const statusPill = getStatusPill(feature.commitmentStatus);
+  const depBadge   = getDepBadge(feature.dependencyCounts);
+  const sourceBadge = getSourceBadge(feature.sourceSystem);
 
   return (
     <div
@@ -33,41 +59,56 @@ export function FeatureCard({ feature }: FeatureCardProps) {
       {...listeners}
       className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
     >
-      <div className="text-xs font-semibold text-red-700">
-        {feature.sourceUrl ? (
-          <a
-            href={feature.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline"
+      {/* Ticket key + source system badge */}
+      <div className="flex items-center justify-between gap-1">
+        <div className="text-xs font-semibold text-red-700 truncate">
+          {feature.sourceUrl ? (
+            <a
+              href={feature.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline"
+            >
+              {feature.ticketKey}
+            </a>
+          ) : (
+            feature.ticketKey
+          )}
+        </div>
+        {sourceBadge && (
+          <span
+            className="shrink-0 rounded px-1 py-0.5 text-gray-500 bg-gray-100"
+            style={{ fontSize: 10 }}
           >
-            {feature.ticketKey}
-          </a>
-        ) : (
-          feature.ticketKey
+            {sourceBadge}
+          </span>
         )}
       </div>
 
-      <div className="mt-1 text-sm font-medium text-gray-900">
+      <div className="mt-1 text-sm font-medium text-gray-900 leading-snug">
         {feature.title}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-        {typeof feature.storyCount === 'number' && (
-          <span className="rounded bg-gray-100 px-2 py-1">
+      <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+        {/* Commitment status pill */}
+        <span className={`rounded-full px-2 py-0.5 font-medium ${statusPill.cls}`}>
+          {statusPill.label}
+        </span>
+
+        {/* Story count with tooltip */}
+        {typeof feature.storyCount === 'number' && feature.storyCount > 0 && (
+          <span
+            className="rounded bg-gray-100 px-2 py-0.5 text-gray-600"
+            title={`${feature.storyCount} ${feature.storyCount === 1 ? 'story' : 'stories'} linked to this feature`}
+          >
             📦 {feature.storyCount}
           </span>
         )}
 
-        {dependencyCount > 0 && (
-          <span className="rounded bg-gray-100 px-2 py-1">
-            🔗 {dependencyCount}
-          </span>
-        )}
-
-        {feature.commitmentStatus && (
-          <span className="rounded bg-gray-100 px-2 py-1">
-            {feature.commitmentStatus}
+        {/* Dependency badge */}
+        {depBadge && (
+          <span className={`rounded px-2 py-0.5 font-medium ${depBadge.cls}`}>
+            🔗 {depBadge.total} dep{depBadge.total !== 1 ? 's' : ''}
           </span>
         )}
       </div>
