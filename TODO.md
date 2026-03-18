@@ -13,14 +13,14 @@
 Active work — tackle these before anything else.
 
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
-- [ ] **Schema Phase 1** — additive changes only (Claude Code — see prompt in P2 section)
-- [ ] **CRITICAL BUG — rebuildLiveTablesFromSnapshots silently fails to populate features/stories/dependencies**
-  - Import pipeline stores raw snapshots correctly but the rebuild step produces zero rows in live tables
-  - 3 successful imports against Demo PI — all showing 211 rows in import_snapshots — but features table was empty
-  - Features had to be manually reconstructed via SQL
-  - Root cause unknown — likely a JOIN failure, a missing column reference post-Phase-1-schema-changes, or a silent exception being swallowed
-  - Fix: read rebuildLiveTablesFromSnapshots in lib/admin/imports.ts, add proper error propagation, fix the rebuild query, verify it produces correct row counts after every import
-  - This is the most critical bug in the codebase — every import has been silently broken
+- [x] **Schema Phase 1** — additive changes only — complete
+- [x] **CRITICAL BUG — rebuildLiveTablesFromSnapshots fixed**
+  - Root cause: CSV has one row per story with feature columns repeated — caused duplicate feature_key inserts hitting UNIQUE constraint, silently failing entire batch
+  - Fix: deduplicate snapshot_features by feature_key before INSERT
+  - Fix: proper error propagation added to all three INSERT calls
+  - Fix: auto-creation of value streams and teams during rebuild
+  - 8 unit tests added covering all resolution branches
+  - Branch pending merge to main
 
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
@@ -28,7 +28,7 @@ Active work — tackle these before anything else.
   - `DispatchShell.tsx` and any nav labels referencing cycles
   - `data/helpContent.ts` — all Help Centre references
   - Also rename the "PI Cycle 2026" data row in Supabase `planning_cycles` table to something sensible (e.g. delete it or rename to `FY26 Q1 (duplicate)`)
-- [ ] Load gold demo dataset — import `dispatch_gold_demo_dataset.csv` via Admin, verify 211 rows clean
+- [x] Load gold demo dataset — 62 features, 211 stories, 27 dependencies, 18 value streams, 29 teams in Demo PI
 - [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
 - [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
 - [x] Admin header — planning header hidden on `/admin` and `/help`
