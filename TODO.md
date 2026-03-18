@@ -695,3 +695,65 @@ These emerged during product thinking sessions and are worth revisiting. Not yet
   - **A clean import requires zero clicks beyond the initial upload and final confirm.** The wizard is not a form — it is a guided, largely automatic process that only surfaces when it genuinely needs help.
 
   **Technical note:** requires the import pipeline to be fully transactional before wizard resolution steps (create team + activate + import) can be made atomic.
+
+---
+
+## 🎨 UI & Design Improvements (post-data milestone)
+
+These were identified after the first successful load of the gold demo dataset.
+
+- [ ] **Design system — extend Tailwind tokens**
+  - Update `royalRed` from `#CC0000` to `#EE2722` (official RMG brand red)
+  - Add `royalYellow: '#FDDD1C'` (official RMG brand yellow — for warnings, Demo Mode banner)
+  - Add semantic status tokens: `success`, `warning`, `danger`, `neutral`
+  - Add surface tokens: `surface`, `surfaceSubtle`, `border`, `textPrimary`, `textMuted`
+  - Add Value Stream accent palette: `vs1` through `vs8` (light pastel tints for board section backgrounds)
+  - All changes in `tailwind.config.ts` only — no arbitrary hex values anywhere
+
+- [ ] **Dashboard — contextual colour coding**
+  - KPI cards: colour-code values against thresholds (green/amber/red)
+  - High criticality dependencies: always red regardless of count
+  - Teams with fresh data: red when 0 during an active event
+  - ART convergence tiles: colour by convergence % (0-50% red, 50-75% amber, 75%+ green)
+  - Sprint distribution bars: colour by load (under/balanced/overloaded)
+  - Convergence gauge: show stage-appropriate target marker
+
+- [ ] **Sorting Frame — Value Stream visual differentiation**
+  - Each Value Stream section gets a tinted background from the `vs1`–`vs8` palette
+  - Assigned consistently (same VS always gets same colour within a session)
+  - Colour is subtle — tints the section header and background, doesn't overpower cards
+  - Team swimlane headers more visually prominent
+
+- [ ] **Feature cards — status pills and dependency badges**
+  - Commitment status pills: Draft (gray), Planned (blue), Committed (green)
+  - Dependency badges: colour by criticality — High (red), Medium (amber), Low (green)
+  - Story count icon — clarify what it means visually
+  - Icon key — accessible via a persistent (?) or (i) button near the board
+
+- [ ] **Global Activity Feed panel**
+  - Collapsible right-side panel accessible from ALL planning pages (not Admin/Help)
+  - Collapsed state: thin tab on right edge with live notification dot for new events
+  - Expanded state: slides in 320px from right, overlays content without reflowing layout
+  - Open/closed state persisted in localStorage per session
+  - Event type colour coding via left border:
+    - Feature activity — blue `#3b82f6`
+    - Dependency events — amber `#d97706`
+    - Import activity — purple `#7c3aed`
+    - Risks & attention — red `#dc2626`
+    - Planning progress — green `#16a34a`
+    - System — gray `#6b7280`
+  - **Navigation — no scrollbar:**
+    - Feed loads with most recent events at top
+    - "↑ Back to latest" pill button appears when scrolled down
+    - "N new events ↑" badge when new events arrive while scrolled down
+    - Smooth scroll animation — no visible scrollbar (scrollbar-hide)
+  - Filter chips at top of panel matching event taxonomy
+  - "Open full screen →" link at bottom
+
+- [ ] **Standalone Activity Feed page (`/activity`)**
+  - Full-screen layout — feed takes full width, larger text, more breathing room
+  - Designed to be projected on a wall or second monitor during PI Planning
+  - Auto-refreshes in real time — no manual refresh
+  - Same filter chips as panel version
+  - Link from Activity Feed panel: "Open full screen →"
+  - Accessible without login during PoC phase
