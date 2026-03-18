@@ -160,7 +160,6 @@ export function AdminControlCentre(props: {
     headers: [] as string[],
     rows: [] as string[][],
     mappings: {} as Record<string, string>,
-    sourceSystem: 'CSV Upload',
   });
 
   const participatingLookup = useMemo(() => {
@@ -772,7 +771,6 @@ export function AdminControlCentre(props: {
               <select className="border rounded px-2 py-1" value={selectedImportCycle} onChange={(e) => setSelectedImportCycle(e.target.value)}>
                 {props.planningCycles.map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.name}</option>)}
               </select>
-              <input className="border rounded px-2 py-1" placeholder="Source system" value={csvState.sourceSystem} onChange={(e) => setCsvState((prev) => ({ ...prev, sourceSystem: e.target.value }))} />
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -786,7 +784,7 @@ export function AdminControlCentre(props: {
                     const guess = parsed.headers.find((header) => header.toLowerCase() === field.toLowerCase());
                     if (guess) initialMappings[field] = guess;
                   });
-                  setCsvState({ fileName: file.name, headers: parsed.headers, rows: parsed.rows, mappings: initialMappings, sourceSystem: csvState.sourceSystem });
+                  setCsvState({ fileName: file.name, headers: parsed.headers, rows: parsed.rows, mappings: initialMappings });
                 }}
               />
             </div>
@@ -834,7 +832,6 @@ export function AdminControlCentre(props: {
                         runImportAction({
                           planningCycleId: selectedImportCycle,
                           fileName: csvState.fileName,
-                          sourceSystem: csvState.sourceSystem,
                           validRows: validation.validMappedRows,
                           warningCount: validation.warnings.length,
                           totalRows: validation.totalRows,
@@ -855,7 +852,6 @@ export function AdminControlCentre(props: {
                         runImportAction({
                           planningCycleId: selectedImportCycle,
                           fileName: csvState.fileName,
-                          sourceSystem: csvState.sourceSystem,
                           validRows: mappedRows,
                           warningCount: validation.warnings.length,
                           totalRows: validation.totalRows,

@@ -135,7 +135,6 @@ export async function updateInitiativeAction(id: string, updates: { name?: strin
 export async function runImportAction(payload: {
   planningCycleId: string;
   fileName: string;
-  sourceSystem: string;
   validRows: CsvMappedRow[];
   warningCount: number;
   totalRows: number;
@@ -144,7 +143,7 @@ export async function runImportAction(payload: {
   const snapshot = await createImportSnapshot({
     planning_cycle_id: payload.planningCycleId,
     file_name: payload.fileName,
-    source_system: payload.sourceSystem,
+    source_system: 'csv_import',
     row_count: payload.totalRows,
     status: 'imported',
   });
