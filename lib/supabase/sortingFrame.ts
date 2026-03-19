@@ -162,6 +162,7 @@ export async function getArts(): Promise<DbArt[]> {
     .from('arts')
     .select('*')
     .eq('is_active', true)
+    .order('display_order', { ascending: true })
     .order('name');
 
   return (data ?? []) as DbArt[];

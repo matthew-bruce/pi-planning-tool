@@ -1,7 +1,10 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-import { Archive, ArchiveRestore, Check, Pencil, X } from 'lucide-react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import { Archive, ArchiveRestore, Check, GripVertical, Pencil, X } from 'lucide-react';
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   createArtAction,
   createInitiativeAction,
@@ -9,6 +12,7 @@ import {
   createTeamAction,
   archivePlanningCycleAction,
   markCycleActiveAction,
+  reorderArtsAction,
   rollbackLatestImportAction,
   runImportAction,
   savePlanningCycleAction,
@@ -70,6 +74,35 @@ function parseCsv(content: string): { headers: string[]; rows: string[][] } {
   const headers = parseLine(lines[0]);
   const rows = lines.slice(1).map(parseLine);
   return { headers, rows };
+}
+
+function SortableArtRow({ art }: { art: Art }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: art.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 rounded border border-gray-200 bg-white px-3 py-2.5"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+      <span className="flex-1 text-sm font-medium text-gray-800">{art.name}</span>
+      {art.short_name && (
+        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{art.short_name}</span>
+      )}
+      <span className={`rounded px-2 py-0.5 text-xs font-medium ${art.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+        {art.is_active ? 'Active' : 'Inactive'}
+      </span>
+    </div>
+  );
 }
 
 export function AdminControlCentre(props: {
@@ -152,6 +185,9 @@ export function AdminControlCentre(props: {
 
   const [newPlatformName, setNewPlatformName] = useState('');
   const [newArtName, setNewArtName] = useState('');
+  const [artOrder, setArtOrder] = useState<Art[]>(props.arts);
+  useEffect(() => { setArtOrder(props.arts); }, [props.arts]);
+  const artSensors = useSensors(useSensor(PointerSensor));
   const [newTeam, setNewTeam] = useState({ name: '', platform_id: '' });
   const [newInitiative, setNewInitiative] = useState({ name: '', art_id: '' });
 
@@ -694,14 +730,27 @@ export function AdminControlCentre(props: {
             <input className="border rounded px-2 py-1" placeholder="Add ART" value={newArtName} onChange={(e) => setNewArtName(e.target.value)} />
             <button className="rounded bg-royalRed px-3 py-1 text-white text-sm" onClick={() => submit(() => createArtAction(newArtName), 'ART added')}>Add</button>
           </div>
-          <table className="min-w-full text-sm"><thead className="bg-gray-100"><tr><th className="p-2 text-left">Name</th><th className="p-2 text-left">Status</th></tr></thead><tbody>
-            {props.arts.map((art) => (
-              <tr key={art.id} className="border-t">
-                <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={art.name} onBlur={(e) => submit(() => updateArtAction(art.id, { name: e.target.value }), 'ART updated')} /></td>
-                <td className="p-2"><button className={`text-xs rounded px-2 py-1 ${art.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`} onClick={() => submit(() => updateArtAction(art.id, { is_active: !art.is_active }), 'ART status updated')}>{art.is_active ? 'Active' : 'Inactive'}</button></td>
-              </tr>
-            ))}
-          </tbody></table>
+          <p className="text-xs text-gray-400">Drag to reorder — determines ART order in the planning header</p>
+          <DndContext
+            sensors={artSensors}
+            onDragEnd={(event: DragEndEvent) => {
+              const { active, over } = event;
+              if (!over || active.id === over.id) return;
+              const oldIndex = artOrder.findIndex((a) => a.id === active.id);
+              const newIndex = artOrder.findIndex((a) => a.id === over.id);
+              const reordered = arrayMove(artOrder, oldIndex, newIndex);
+              setArtOrder(reordered);
+              void reorderArtsAction(reordered.map((a) => a.id));
+            }}
+          >
+            <SortableContext items={artOrder.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1.5">
+                {artOrder.map((art) => (
+                  <SortableArtRow key={art.id} art={art} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
