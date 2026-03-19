@@ -738,3 +738,24 @@ These were identified after the first successful load of the gold demo dataset.
   - Full-screen feed at `/activity`; max-w-3xl centred; auto-refreshes every 30s
   - Same filter chips and colour coding as panel; "↑ Latest" pill on scroll
   - Added "Activity" nav item in DispatchShell sidebar
+
+- [x] **Feature cards — story-sprint dot indicator** (`components/FeatureCard.tsx`)
+  - Detailed mode only: dots below commitment pill showing story distribution across sprints
+  - Grouped by sprint (S1 ●●● S2 ●●), coloured by story status (Done→green, In Progress→amber, Blocked→red, To Do→gray)
+  - Suppressed when all stories are in the same sprint as the parent feature
+  - Condensed format (●×N) for >6 stories per sprint
+  - `lib/models.ts`: added `FeatureStory` type and `stories?: FeatureStory[]` + `sprintNumber?` to `Feature`
+  - `lib/supabase/sortingFrame.ts`: replaced `getStoryCountsByFeature` with `getStoriesForCycle`; sprint numbers resolved at load time
+
+- [x] **Feature cards — expandable story list** (`components/FeatureCard.tsx`)
+  - Detailed mode only: "▶ N stories" toggle at bottom of each feature card
+  - Expands inline below card with 150ms grid-template-rows animation
+  - Story rows: ticket key (muted red), title, sprint badge (if different from parent), status dot
+  - `onPointerDown` stops propagation to prevent dnd-kit drag activating on toggle click
+  - Collapsed by default; expanding one card does not affect others
+
+- [x] **Parking lot demo features — Demo PI**
+  - Inserted 8 Draft features with sprint_id = NULL across both ARTs
+  - WAA: WEB-20114..20117 (Helios/Cosmos/Interstellar/Nebula, across 4 initiatives)
+  - OOH: OOH-20110..20113 (Andromeda/Titans/Orion/Bumblebee, across 4 initiatives)
+  - Verified: SELECT COUNT(*) WHERE sprint_id IS NULL = 8
