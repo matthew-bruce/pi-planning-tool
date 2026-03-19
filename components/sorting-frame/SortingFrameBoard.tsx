@@ -325,8 +325,6 @@ export function SortingFrameBoard({ initialData }: Props) {
               */}
               <div className="sticky top-0 z-30 mb-2 border-b border-gray-200 bg-white shadow-sm">
                 <div className="flex divide-x divide-gray-200">
-                  {/* Spacer — same width as team label cells (w-40 = 160px) */}
-                  <div className="w-40 shrink-0 px-2 py-2" />
                   {data.sprints.map((sprint) => (
                     <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
                       <div className="text-sm font-semibold text-gray-800">
@@ -379,9 +377,10 @@ export function SortingFrameBoard({ initialData }: Props) {
 
                       {!collapsed && (
                         /*
-                          Team rows — divide-y adds horizontal separator between rows.
-                          Each row uses divide-x so vertical column dividers align with
-                          the sticky header's divide-x cells above.
+                          Each team is a block: full-width bar on top, sprint cells below.
+                          divide-y on the container adds a hairline between teams.
+                          divide-x on the sprint row aligns vertical dividers with the
+                          sticky header's sprint cells above.
                         */
                         <div className="divide-y divide-gray-200">
                           {initiative.teams.map((team) => {
@@ -389,14 +388,10 @@ export function SortingFrameBoard({ initialData }: Props) {
                             const teamCollapsed = collapsedTeams[teamKey];
 
                             return (
-                              <div key={team.id} className="flex items-stretch divide-x divide-gray-200">
-                                {/*
-                                  Team label — first flex child (no left border from divide-x).
-                                  w-40 = 160px, matches the spacer in the sticky header.
-                                  VS colour left accent replaces the old card border.
-                                */}
+                              <div key={team.id}>
+                                {/* Full-width team bar — spans all sprint columns */}
                                 <button
-                                  className="w-40 shrink-0 flex items-center justify-between bg-white px-2 py-1.5 text-left"
+                                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left"
                                   style={{ borderLeft: `3px solid ${vsColour.text}` }}
                                   onClick={() =>
                                     setCollapsedTeams((prev) => ({
@@ -405,37 +400,41 @@ export function SortingFrameBoard({ initialData }: Props) {
                                     }))
                                   }
                                 >
-                                  <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-gray-800">
+                                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-gray-800">
                                     {teamCollapsed
                                       ? <ChevronRight size={12} className="shrink-0 text-gray-400" />
                                       : <ChevronDown size={12} className="shrink-0 text-gray-400" />}
                                     <span className="truncate">
                                       <Highlight text={team.name} term={search} />
                                       {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                        <span className="ml-0.5 font-normal text-gray-500">
+                                        <span className="ml-1 font-normal text-gray-500">
                                           (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
                                         </span>
                                       )}
                                     </span>
                                   </span>
-                                  <span className="ml-1 shrink-0 text-xs text-gray-500">
-                                    {team.features.length}
+                                  <span className="ml-2 shrink-0 text-xs text-gray-500">
+                                    {team.features.length} features
                                   </span>
                                 </button>
 
-                                {/* Sprint cells — flex-1 so they share remaining width equally */}
-                                {!teamCollapsed && data.sprints.map((sprint) => (
-                                  <SprintColumn
-                                    key={`${team.id}-${sprint.id}`}
-                                    sprint={sprint}
-                                    features={team.features.filter(
-                                      (feature) => feature.sprintId === sprint.id
-                                    )}
-                                    showHeader={false}
-                                    searchTerm={search}
-                                    className="flex-1 min-w-0 bg-white p-2 min-h-[80px]"
-                                  />
-                                ))}
+                                {/* Sprint cells — row below the team bar */}
+                                {!teamCollapsed && (
+                                  <div className="flex divide-x divide-gray-200">
+                                    {data.sprints.map((sprint) => (
+                                      <SprintColumn
+                                        key={`${team.id}-${sprint.id}`}
+                                        sprint={sprint}
+                                        features={team.features.filter(
+                                          (feature) => feature.sprintId === sprint.id
+                                        )}
+                                        showHeader={false}
+                                        searchTerm={search}
+                                        className="flex-1 min-w-0 bg-white p-2 min-h-[80px]"
+                                      />
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

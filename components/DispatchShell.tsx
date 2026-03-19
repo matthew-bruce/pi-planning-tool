@@ -115,31 +115,32 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
       >
         {/* Brand area */}
         <div className="shrink-0">
-          {/* Logo + wordmark — hidden when collapsed */}
-          {!collapsed && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Top row: logo (expanded only) + collapse toggle (desktop only) */}
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            {!collapsed && (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src="/Royal_Mail_logo_2024.svg"
                 alt="Royal Mail"
-                style={{ height: 36 }}
-                className="mb-2"
+                style={{ height: 32 }}
               />
-              <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
-              <p className="mt-1 text-xs text-gray-500">PI Planning orchestration</p>
-            </>
-          )}
-
-          {/* Collapse / expand toggle — desktop only */}
-          {!isMobile && (
-            <div className={`mt-2 flex ${collapsed ? 'justify-center' : 'justify-end'}`}>
+            )}
+            {!isMobile && (
               <button
                 onClick={toggleCollapsed}
                 title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               >
-                {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+                {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
               </button>
+            )}
+          </div>
+
+          {/* Wordmark + subtitle — hidden when collapsed */}
+          {!collapsed && (
+            <div className="mt-2">
+              <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
+              <p className="mt-0.5 text-xs text-gray-500">PI Planning orchestration</p>
             </div>
           )}
         </div>
