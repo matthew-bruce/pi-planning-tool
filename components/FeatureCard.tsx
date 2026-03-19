@@ -181,18 +181,16 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
             Source badge is always visible — both compact and detailed. */}
         <div className="flex items-start justify-between gap-1">
           <div className="min-w-0 flex-1 truncate text-xs font-semibold text-red-700">
-            {feature.sourceUrl ? (
-              <a
-                href={feature.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:underline"
-              >
-                <Highlight text={feature.ticketKey} term={searchTerm} />
-              </a>
-            ) : (
+            <a
+              href={feature.sourceUrl ?? '#'}
+              target={feature.sourceUrl ? '_blank' : undefined}
+              rel={feature.sourceUrl ? 'noreferrer' : undefined}
+              title={feature.sourceUrl ? undefined : 'View in source system (coming soon)'}
+              className="hover:underline"
+              onClick={feature.sourceUrl ? undefined : (e) => e.preventDefault()}
+            >
               <Highlight text={feature.ticketKey} term={searchTerm} />
-            )}
+            </a>
           </div>
 
           {sourceBadge && (
@@ -288,12 +286,16 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                   style={{ borderLeft: '2px solid #e5e7eb', paddingLeft: 12 }}
                 >
                   {/* Ticket key — muted red, monospace */}
-                  <span
-                    className="shrink-0 font-mono"
+                  <a
+                    href="#"
+                    className="shrink-0 font-mono hover:underline"
                     style={{ fontSize: 10, color: '#991b1b', opacity: 0.75 }}
+                    title="View in source system (coming soon)"
+                    onClick={(e) => e.preventDefault()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     {story.ticketKey}
-                  </span>
+                  </a>
 
                   {/* Story title — feature prefix stripped if present */}
                   <span className="flex-1 truncate text-gray-700" style={{ fontSize: 12 }}>

@@ -53,8 +53,6 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
     setSelectedArtId,
     demoMode,
     setDemoMode,
-    density,
-    setDensity,
     hydrateSeed,
     runSimulationTick,
   } = useDispatchStore();
@@ -334,26 +332,6 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
-
-              {/* Density toggle */}
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-white">Card view</span>
-                {(['compact', 'detailed'] as const).map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDensity(d)}
-                    className="rounded px-2 py-1 text-sm capitalize transition-colors"
-                    style={
-                      density === d
-                        ? { backgroundColor: '#ffffff', color: '#EE2722' }
-                        : { backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }
-                    }
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
             </div>
           </header>
         )}

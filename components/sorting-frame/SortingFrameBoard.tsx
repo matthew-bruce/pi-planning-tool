@@ -70,6 +70,7 @@ export function SortingFrameBoard({ initialData }: Props) {
 
   const {
     density,
+    setDensity,
     selectedArtId,
     setSelectedArtId,
     assignFeatureSprint,
@@ -216,6 +217,43 @@ export function SortingFrameBoard({ initialData }: Props) {
     }));
   }, [data.sprints]);
 
+  // Expand/collapse all state derivation.
+  const allExpanded = useMemo(() => {
+    if (!filteredInitiatives.length) return true;
+    return filteredInitiatives.every(
+      (initiative) =>
+        !collapsedInitiatives[initiative.id] &&
+        initiative.teams.every((team) => !collapsedTeams[`${initiative.id}-${team.id}`])
+    );
+  }, [filteredInitiatives, collapsedInitiatives, collapsedTeams]);
+
+  const allCollapsed = useMemo(() => {
+    if (!filteredInitiatives.length) return true;
+    return filteredInitiatives.every(
+      (initiative) =>
+        !!collapsedInitiatives[initiative.id] &&
+        initiative.teams.every((team) => !!collapsedTeams[`${initiative.id}-${team.id}`])
+    );
+  }, [filteredInitiatives, collapsedInitiatives, collapsedTeams]);
+
+  const expandAll = () => {
+    setCollapsedInitiatives({});
+    setCollapsedTeams({});
+  };
+
+  const collapseAll = () => {
+    const initiatives: Record<string, boolean> = {};
+    const teams: Record<string, boolean> = {};
+    filteredInitiatives.forEach((initiative) => {
+      initiatives[initiative.id] = true;
+      initiative.teams.forEach((team) => {
+        teams[`${initiative.id}-${team.id}`] = true;
+      });
+    });
+    setCollapsedInitiatives(initiatives);
+    setCollapsedTeams(teams);
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
     const featureId = String(event.active.id);
     const over = event.over?.id ? String(event.over.id) : null;
@@ -267,6 +305,44 @@ export function SortingFrameBoard({ initialData }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
+            {/* Compact / Detailed density toggle */}
+            {(['compact', 'detailed'] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDensity(d)}
+                className={[
+                  'rounded border px-2 py-1 text-sm capitalize',
+                  density === d
+                    ? 'border-royalRed bg-royalRed text-white'
+                    : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50',
+                ].join(' ')}
+              >
+                {d}
+              </button>
+            ))}
+
+            {/* Expand / Collapse all — only shown when board has content */}
+            {filteredInitiatives.length > 0 && (
+              <>
+                <button
+                  onClick={expandAll}
+                  disabled={allExpanded}
+                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Expand all sections and teams"
+                >
+                  ⊞ Expand all
+                </button>
+                <button
+                  onClick={collapseAll}
+                  disabled={allCollapsed}
+                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Collapse all sections and teams"
+                >
+                  ⊟ Collapse all
+                </button>
+              </>
+            )}
           </div>
         </div>
         <p className="mt-0.5 text-sm text-gray-500">
