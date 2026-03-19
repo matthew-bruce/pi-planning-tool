@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { highlightMatch } from '@/lib/highlightMatch';
 import {
   DndContext,
   DragEndEvent,
@@ -27,6 +28,26 @@ const VS_COLOURS = [
   { bg: '#f0f9ff', text: '#0c4a6e' }, // vs7
   { bg: '#f5f3ff', text: '#4c1d95' }, // vs8
 ];
+
+function Highlight({ text, term }: { text: string; term?: string }) {
+  const segments = highlightMatch(text, term ?? '');
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.highlight ? (
+          <mark
+            key={i}
+            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
+}
 
 function formatTeamType(teamType: string): string {
   return teamType.charAt(0).toUpperCase() + teamType.slice(1).toLowerCase();
@@ -345,10 +366,10 @@ export function SortingFrameBoard({ initialData }: Props) {
                             >
                               <span className="text-sm font-medium text-gray-800 flex items-center gap-1">
                                 {teamCollapsed ? <ChevronRight size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
-                                {team.name}{' '}
+                                <Highlight text={team.name} term={search} />{' '}
                                 {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
                                   <span className="text-xs text-gray-500 font-normal">
-                                    ({team.platform ?? formatTeamType(team.teamType!)})
+                                    (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
                                   </span>
                                 )}
                               </span>
@@ -366,6 +387,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                     features={team.features.filter(
                                       (feature) => feature.sprintId === sprint.id
                                     )}
+                                    searchTerm={search}
                                   />
                                 ))}
                               </div>

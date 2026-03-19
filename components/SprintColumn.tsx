@@ -9,9 +9,10 @@ import { FeatureCard } from '@/components/FeatureCard';
 type SprintColumnProps = {
   sprint: Sprint;
   features: Feature[];
+  searchTerm?: string;
 };
 
-export function SprintColumn({ sprint, features }: SprintColumnProps) {
+export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps) {
   const { setNodeRef } = useDroppable({ id: sprint.id });
 
   const sprintLabel = sprint.name ?? `Sprint ${sprint.number}`;
@@ -32,7 +33,7 @@ export function SprintColumn({ sprint, features }: SprintColumnProps) {
         strategy={verticalListSortingStrategy}
       >
         {features.map((feature) => (
-          <FeatureCard key={feature.id} feature={feature} />
+          <FeatureCard key={feature.id} feature={feature} searchTerm={searchTerm} />
         ))}
       </SortableContext>
     </div>

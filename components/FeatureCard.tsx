@@ -4,10 +4,32 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import type { Feature } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
+import { highlightMatch } from '@/lib/highlightMatch';
 
 type FeatureCardProps = {
   feature: Feature;
+  searchTerm?: string;
 };
+
+function Highlight({ text, term }: { text: string; term?: string }) {
+  const segments = highlightMatch(text, term ?? '');
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.highlight ? (
+          <mark
+            key={i}
+            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
+}
 
 function getStatusPill(status: string | null | undefined) {
   const s = (status ?? '').toLowerCase();
@@ -36,7 +58,7 @@ function getSourceBadge(sourceSystem: string | null | undefined) {
   return sourceSystem.toUpperCase().slice(0, 6);
 }
 
-export function FeatureCard({ feature }: FeatureCardProps) {
+export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
   const { density } = useDispatchStore();
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
@@ -71,10 +93,10 @@ export function FeatureCard({ feature }: FeatureCardProps) {
             rel="noreferrer"
             className="hover:underline"
           >
-            {feature.ticketKey}
+            <Highlight text={feature.ticketKey} term={searchTerm} />
           </a>
         ) : (
-          feature.ticketKey
+          <Highlight text={feature.ticketKey} term={searchTerm} />
         )}
       </div>
 
@@ -86,7 +108,7 @@ export function FeatureCard({ feature }: FeatureCardProps) {
       )}
 
       <div className="mt-1 text-sm font-medium text-gray-900 leading-snug">
-        {feature.title}
+        <Highlight text={feature.title} term={searchTerm} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
