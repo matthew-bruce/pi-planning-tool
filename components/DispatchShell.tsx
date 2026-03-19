@@ -322,11 +322,11 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                   <button
                     key={art.id}
                     onClick={() => setSelectedArtId(art.id)}
-                    className="rounded-full border px-3 py-1 text-sm transition-colors"
+                    className="rounded-full border px-3 py-1 text-sm"
                     style={
                       selectedArtId === art.id
-                        ? { backgroundColor: '#ffffff', color: '#EE2722', borderColor: '#ffffff' }
-                        : { backgroundColor: 'transparent', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)' }
+                        ? { backgroundColor: '#ffffff', color: '#EE2722', borderColor: '#ffffff', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
+                        : { backgroundColor: 'transparent', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
                     }
                   >
                     {art.name}

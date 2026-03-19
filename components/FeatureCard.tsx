@@ -82,7 +82,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
+      className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
     >
       {/* Ticket key */}
       <div className="text-xs font-semibold text-red-700 truncate">

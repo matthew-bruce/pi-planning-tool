@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { highlightMatch } from '@/lib/highlightMatch';
 import { formatSprintRange } from '@/lib/utils';
 import {
@@ -366,7 +366,14 @@ export function SortingFrameBoard({ initialData }: Props) {
                         }
                       >
                         <div className="flex items-center gap-2">
-                          {collapsed ? <ChevronRight size={14} style={{ color: vsColour.text }} /> : <ChevronDown size={14} style={{ color: vsColour.text }} />}
+                          <ChevronDown
+                            size={14}
+                            style={{
+                              color: vsColour.text,
+                              transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                              transition: 'transform 200ms ease-out',
+                            }}
+                          />
                           <span className="font-semibold" style={{ color: vsColour.text }}>
                             {initiative.name}
                           </span>
@@ -379,74 +386,104 @@ export function SortingFrameBoard({ initialData }: Props) {
                         </span>
                       </button>
 
-                      {!collapsed && (
-                        /*
-                          Each team is a block: full-width bar on top, sprint cells below.
-                          divide-y on the container adds a hairline between teams.
-                          divide-x on the sprint row aligns vertical dividers with the
-                          sticky header's sprint cells above.
-                        */
-                        <div className="divide-y divide-gray-200">
-                          {initiative.teams.map((team) => {
-                            const teamKey = `${initiative.id}-${team.id}`;
-                            const teamCollapsed = collapsedTeams[teamKey];
+                      {/*
+                        grid-template-rows: 0fr → 1fr animates true height without
+                        the max-height timing inaccuracy. Inner div needs overflow:hidden
+                        to clip content during the collapse animation.
+                      */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateRows: collapsed ? '0fr' : '1fr',
+                          transition: collapsed
+                            ? 'grid-template-rows 180ms ease-in'
+                            : 'grid-template-rows 220ms ease-out',
+                        }}
+                      >
+                        <div style={{ overflow: 'hidden' }}>
+                          {/*
+                            Each team is a block: full-width bar on top, sprint cells below.
+                            divide-y on the container adds a hairline between teams.
+                            divide-x on the sprint row aligns vertical dividers with the
+                            sticky header's sprint cells above.
+                          */}
+                          <div className="divide-y divide-gray-200">
+                            {initiative.teams.map((team) => {
+                              const teamKey = `${initiative.id}-${team.id}`;
+                              const teamCollapsed = collapsedTeams[teamKey];
 
-                            return (
-                              <div key={team.id}>
-                                {/* Full-width team bar — spans all sprint columns */}
-                                <button
-                                  className="flex w-full items-center justify-between bg-white px-3 py-2 text-left"
-                                  style={{ borderLeft: `3px solid ${vsColour.text}` }}
-                                  onClick={() =>
-                                    setCollapsedTeams((prev) => ({
-                                      ...prev,
-                                      [teamKey]: !prev[teamKey],
-                                    }))
-                                  }
-                                >
-                                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-gray-800">
-                                    {teamCollapsed
-                                      ? <ChevronRight size={12} className="shrink-0 text-gray-400" />
-                                      : <ChevronDown size={12} className="shrink-0 text-gray-400" />}
-                                    <span className="truncate">
-                                      <Highlight text={team.name} term={search} />
-                                      {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                        <span className="ml-1 font-normal text-gray-500">
-                                          (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
-                                        </span>
-                                      )}
-                                    </span>
-                                  </span>
-                                  <span className="ml-2 shrink-0 text-xs text-gray-500">
-                                    {team.features.length} features
-                                  </span>
-                                </button>
-
-                                {/* Sprint cells — row below the team bar, tinted with VS colour */}
-                                {!teamCollapsed && (
-                                  <div
-                                    className="flex divide-x divide-gray-200"
-                                    style={{ backgroundColor: vsColour.bg }}
+                              return (
+                                <div key={team.id}>
+                                  {/* Full-width team bar — spans all sprint columns */}
+                                  <button
+                                    className="flex w-full items-center justify-between bg-white px-3 py-2 text-left"
+                                    style={{ borderLeft: `3px solid ${vsColour.text}` }}
+                                    onClick={() =>
+                                      setCollapsedTeams((prev) => ({
+                                        ...prev,
+                                        [teamKey]: !prev[teamKey],
+                                      }))
+                                    }
                                   >
-                                    {data.sprints.map((sprint) => (
-                                      <SprintColumn
-                                        key={`${team.id}-${sprint.id}`}
-                                        sprint={sprint}
-                                        features={team.features.filter(
-                                          (feature) => feature.sprintId === sprint.id
-                                        )}
-                                        showHeader={false}
-                                        searchTerm={search}
-                                        className="flex-1 min-w-0 p-2 min-h-[80px]"
+                                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-gray-800">
+                                      <ChevronDown
+                                        size={12}
+                                        className="shrink-0 text-gray-400"
+                                        style={{
+                                          transform: teamCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                          transition: 'transform 150ms ease-out',
+                                        }}
                                       />
-                                    ))}
+                                      <span className="truncate">
+                                        <Highlight text={team.name} term={search} />
+                                        {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
+                                          <span className="ml-1 font-normal text-gray-500">
+                                            (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
+                                          </span>
+                                        )}
+                                      </span>
+                                    </span>
+                                    <span className="ml-2 shrink-0 text-xs text-gray-500">
+                                      {team.features.length} features
+                                    </span>
+                                  </button>
+
+                                  {/* Sprint cells — animated row below the team bar, tinted with VS colour */}
+                                  <div
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateRows: teamCollapsed ? '0fr' : '1fr',
+                                      transition: teamCollapsed
+                                        ? 'grid-template-rows 130ms ease-in'
+                                        : 'grid-template-rows 150ms ease-out',
+                                    }}
+                                  >
+                                    <div style={{ overflow: 'hidden' }}>
+                                      <div
+                                        className="flex divide-x divide-gray-200"
+                                        style={{ backgroundColor: vsColour.bg }}
+                                      >
+                                        {data.sprints.map((sprint) => (
+                                          <SprintColumn
+                                            key={`${team.id}-${sprint.id}`}
+                                            sprint={sprint}
+                                            features={team.features.filter(
+                                              (feature) => feature.sprintId === sprint.id
+                                            )}
+                                            showHeader={false}
+                                            searchTerm={search}
+                                            className="flex-1 min-w-0 p-2 min-h-[80px]"
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </section>
                   );
                 })}
