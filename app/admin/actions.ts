@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { CsvMappedRow, GeneratedSprintPreview, PlanningCycle } from '@/lib/admin/types';
-import { createArt, updateArt } from '@/lib/admin/arts';
+import { createArt, reorderArts, updateArt } from '@/lib/admin/arts';
 import { createImportActivityEvent, createImportSnapshot, insertSnapshotRows, rebuildLiveTablesFromSnapshots, rollbackLatestImport } from '@/lib/admin/imports';
 import { createInitiative, updateInitiative } from '@/lib/admin/initiatives';
 import { archivePlanningCycle, createPlanningCycleWithSprints, markCycleActive, updatePlanningCycle, updatePlanningCycleWithSprints } from '@/lib/admin/planningCycles';
@@ -85,6 +85,13 @@ export async function updateArtAction(id: string, updates: { name?: string; is_a
   const result = await updateArt(id, updates);
   if (result.error) return fail(result.error);
   revalidatePath('/admin');
+  return ok();
+}
+
+export async function reorderArtsAction(orderedIds: string[]) {
+  const result = await reorderArts(orderedIds);
+  if (result.error) return fail(result.error);
+  // No revalidatePath — optimistic update already applied client-side
   return ok();
 }
 

@@ -3,10 +3,33 @@
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import type { Feature } from '@/lib/models';
+import { useDispatchStore } from '@/store/useDispatchStore';
+import { highlightMatch } from '@/lib/highlightMatch';
 
 type FeatureCardProps = {
   feature: Feature;
+  searchTerm?: string;
 };
+
+function Highlight({ text, term }: { text: string; term?: string }) {
+  const segments = highlightMatch(text, term ?? '');
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.highlight ? (
+          <mark
+            key={i}
+            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
+}
 
 function getStatusPill(status: string | null | undefined) {
   const s = (status ?? '').toLowerCase();
@@ -35,7 +58,8 @@ function getSourceBadge(sourceSystem: string | null | undefined) {
   return sourceSystem.toUpperCase().slice(0, 6);
 }
 
-export function FeatureCard({ feature }: FeatureCardProps) {
+export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
+  const { density } = useDispatchStore();
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
       id: feature.id,
@@ -50,6 +74,7 @@ export function FeatureCard({ feature }: FeatureCardProps) {
   const statusPill = getStatusPill(feature.commitmentStatus);
   const depBadge   = getDepBadge(feature.dependencyCounts);
   const sourceBadge = getSourceBadge(feature.sourceSystem);
+  const isCompact = density === 'compact';
 
   return (
     <div
@@ -59,34 +84,31 @@ export function FeatureCard({ feature }: FeatureCardProps) {
       {...listeners}
       className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
     >
-      {/* Ticket key + source system badge */}
-      <div className="flex items-center justify-between gap-1">
-        <div className="text-xs font-semibold text-red-700 truncate">
-          {feature.sourceUrl ? (
-            <a
-              href={feature.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
-              {feature.ticketKey}
-            </a>
-          ) : (
-            feature.ticketKey
-          )}
-        </div>
-        {sourceBadge && (
-          <span
-            className="shrink-0 rounded px-1 py-0.5 text-gray-500 bg-gray-100"
-            style={{ fontSize: 10 }}
+      {/* Ticket key */}
+      <div className="text-xs font-semibold text-red-700 truncate">
+        {feature.sourceUrl ? (
+          <a
+            href={feature.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline"
           >
-            {sourceBadge}
-          </span>
+            <Highlight text={feature.ticketKey} term={searchTerm} />
+          </a>
+        ) : (
+          <Highlight text={feature.ticketKey} term={searchTerm} />
         )}
       </div>
 
+      {/* Source system badge — below ticket key, hidden in compact */}
+      {!isCompact && sourceBadge && (
+        <div className="text-gray-400" style={{ fontSize: 9 }}>
+          {sourceBadge}
+        </div>
+      )}
+
       <div className="mt-1 text-sm font-medium text-gray-900 leading-snug">
-        {feature.title}
+        <Highlight text={feature.title} term={searchTerm} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -95,8 +117,8 @@ export function FeatureCard({ feature }: FeatureCardProps) {
           {statusPill.label}
         </span>
 
-        {/* Story count with tooltip */}
-        {typeof feature.storyCount === 'number' && feature.storyCount > 0 && (
+        {/* Story count and dep badge — hidden in compact */}
+        {!isCompact && typeof feature.storyCount === 'number' && feature.storyCount > 0 && (
           <span
             className="rounded bg-gray-100 px-2 py-0.5 text-gray-600"
             title={`${feature.storyCount} ${feature.storyCount === 1 ? 'story' : 'stories'} linked to this feature`}
@@ -105,8 +127,7 @@ export function FeatureCard({ feature }: FeatureCardProps) {
           </span>
         )}
 
-        {/* Dependency badge */}
-        {depBadge && (
+        {!isCompact && depBadge && (
           <span className={`rounded px-2 py-0.5 font-medium ${depBadge.cls}`}>
             🔗 {depBadge.total} dep{depBadge.total !== 1 ? 's' : ''}
           </span>

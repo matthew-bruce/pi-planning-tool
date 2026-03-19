@@ -27,6 +27,7 @@ export type Art = {
   name: string;
   short_name: string | null;
   is_active: boolean;
+  display_order: number;
   updated_at: string;
 };
 

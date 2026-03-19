@@ -35,7 +35,9 @@ export default function DependenciesPage() {
   const selectedFeature = filteredFeatures.find((f) => f.id === selectedNodeId);
 
   return (
-    <div className="flex gap-3 h-[calc(100vh-170px)]">
+    <div className="space-y-3">
+      <h1 className="text-2xl font-semibold text-gray-900">Dependencies Near You</h1>
+    <div className="flex gap-3 h-[calc(100vh-210px)]">
       <div className="flex-1 border rounded">
         <div className="p-2 flex gap-2 border-b">
           <select className="border rounded px-2" value={initiativeFilter} onChange={(e) => setInitiativeFilter(e.target.value)}>
@@ -66,6 +68,7 @@ export default function DependenciesPage() {
           <p className="text-sm text-gray-500 mt-2">Click a node to inspect.</p>
         )}
       </aside>
+    </div>
     </div>
   );
 }

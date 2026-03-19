@@ -32,7 +32,7 @@ export const useDispatchStore = create<DispatchState>()(
     (set, get) => ({
       ...seeded,
       selectedArtId: seeded.arts[0].id,
-      demoMode: true,
+      demoMode: false,
       density: 'compact',
       hydrateSeed: () => set((state) => (state.features.length ? state : { ...seeded })),
       setSelectedArtId: (selectedArtId) => set({ selectedArtId }),

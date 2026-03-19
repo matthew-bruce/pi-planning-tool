@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { highlightMatch } from '@/lib/highlightMatch';
 import {
   DndContext,
   DragEndEvent,
@@ -15,17 +17,41 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 
 type Props = { initialData: SortingFrameData };
 
-// Value Stream colour palette — vs1–vs8
+// Value Stream colour palette — warm RMG tones, vs1–vs8
 const VS_COLOURS = [
-  { bg: '#dbeafe', text: '#1d4ed8' }, // vs1
-  { bg: '#dcfce7', text: '#15803d' }, // vs2
-  { bg: '#fef9c3', text: '#a16207' }, // vs3
-  { bg: '#fce7f3', text: '#9d174d' }, // vs4
-  { bg: '#ede9fe', text: '#6d28d9' }, // vs5
-  { bg: '#ffedd5', text: '#c2410c' }, // vs6
-  { bg: '#cffafe', text: '#0e7490' }, // vs7
-  { bg: '#f1f5f9', text: '#475569' }, // vs8
+  { bg: '#fce7e7', text: '#991b1b' }, // vs1
+  { bg: '#fef9c3', text: '#854d0e' }, // vs2
+  { bg: '#ffedd5', text: '#9a3412' }, // vs3
+  { bg: '#fce7f3', text: '#831843' }, // vs4
+  { bg: '#fef3c7', text: '#92400e' }, // vs5
+  { bg: '#f0fdf4', text: '#14532d' }, // vs6
+  { bg: '#f0f9ff', text: '#0c4a6e' }, // vs7
+  { bg: '#f5f3ff', text: '#4c1d95' }, // vs8
 ];
+
+function Highlight({ text, term }: { text: string; term?: string }) {
+  const segments = highlightMatch(text, term ?? '');
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.highlight ? (
+          <mark
+            key={i}
+            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
+}
+
+function formatTeamType(teamType: string): string {
+  return teamType.charAt(0).toUpperCase() + teamType.slice(1).toLowerCase();
+}
 
 function getVsColour(index: number) {
   return VS_COLOURS[index % VS_COLOURS.length];
@@ -111,8 +137,15 @@ export function SortingFrameBoard({ initialData }: Props) {
           .map((team) => ({
             ...team,
             features: team.features.filter((feature) => {
-              const target = `${feature.ticketKey} ${feature.title}`.toLowerCase();
-              return target.includes(lower);
+              if (!lower) return true;
+              const haystack = [
+                feature.ticketKey,
+                feature.title,
+                team.name,
+                team.platform ?? '',
+                team.teamType ?? '',
+              ].join(' ').toLowerCase();
+              return haystack.includes(lower);
             }),
           }))
           .filter((team) => team.features.length > 0);
@@ -208,14 +241,14 @@ export function SortingFrameBoard({ initialData }: Props) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mb-4 rounded border border-gray-200 bg-white p-3 text-sm">
-        <div className="font-semibold text-gray-800">
-          {data.cycle.name} {loading ? '• Loading...' : ''}
-        </div>
-        <div className="text-xs text-gray-500">
-          {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} -{' '}
-          {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
-        </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold text-gray-900">Sorting Frame</h1>
+        <p className="text-sm text-gray-500 mt-0.5">
+          {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
+          <span className="text-xs">
+            {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
+          </span>
+        </p>
       </div>
 
       <div className="mb-4 flex gap-3">
@@ -234,14 +267,10 @@ export function SortingFrameBoard({ initialData }: Props) {
 
         <input
           className="rounded border px-2 py-1"
-          placeholder="Search ticket/title"
+          placeholder="Search ticket, title, team or platform"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
-        <div className="self-center text-xs text-gray-500">
-          Density: {density}
-        </div>
       </div>
 
       <div className="flex">
@@ -298,14 +327,17 @@ export function SortingFrameBoard({ initialData }: Props) {
                       }))
                     }
                   >
-                    <span className="font-semibold" style={{ color: vsColour.text }}>
-                      {initiative.name}
-                    </span>
-                    <span className="text-xs" style={{ color: vsColour.text, opacity: 0.8 }}>
+                    <div className="flex items-center gap-2">
+                      {collapsed ? <ChevronRight size={14} style={{ color: vsColour.text }} /> : <ChevronDown size={14} style={{ color: vsColour.text }} />}
+                      <span className="font-semibold" style={{ color: vsColour.text }}>
+                        {initiative.name}
+                      </span>
+                    </div>
+                    <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
                       Teams {initiative.summary.teamsCount} • Features{' '}
-                      {initiative.summary.featuresCount} • Deps{' '}
+                      {initiative.summary.featuresCount} • Dependencies{' '}
                       {initiative.summary.dependencyCount} • Conflicts{' '}
-                      {initiative.summary.conflictCount} {collapsed ? '▸' : '▾'}
+                      {initiative.summary.conflictCount}
                     </span>
                   </button>
 
@@ -332,15 +364,17 @@ export function SortingFrameBoard({ initialData }: Props) {
                                 }))
                               }
                             >
-                              <span className="text-sm font-medium text-gray-800">
-                                {team.name}{' '}
-                                <span className="text-xs text-gray-500 font-normal">
-                                  ({team.platform})
-                                </span>
+                              <span className="text-sm font-medium text-gray-800 flex items-center gap-1">
+                                {teamCollapsed ? <ChevronRight size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+                                <Highlight text={team.name} term={search} />{' '}
+                                {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
+                                  <span className="text-xs text-gray-500 font-normal">
+                                    (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
+                                  </span>
+                                )}
                               </span>
                               <span className="text-xs text-gray-500">
-                                {team.features.length} features{' '}
-                                {teamCollapsed ? '▸' : '▾'}
+                                {team.features.length} features
                               </span>
                             </button>
 
@@ -353,6 +387,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                     features={team.features.filter(
                                       (feature) => feature.sprintId === sprint.id
                                     )}
+                                    searchTerm={search}
                                   />
                                 ))}
                               </div>
