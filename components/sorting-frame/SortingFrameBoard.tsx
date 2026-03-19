@@ -323,11 +323,15 @@ export function SortingFrameBoard({ initialData }: Props) {
                 The flex layout (w-40 spacer + flex-1 cells) mirrors every team row
                 exactly so vertical dividers align perfectly.
               */}
-              <div className="sticky top-0 z-30 mb-2 border-b border-gray-200 bg-white shadow-sm">
-                <div className="flex divide-x divide-gray-200">
+              {/*
+                px-px on the inner row matches the 1px left+right border on each
+                VS <section>, so all 6 sprint column headers align with the cells below.
+              */}
+              <div className="sticky top-0 z-30 mb-2 border-b border-gray-200 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
+                <div className="flex divide-x divide-gray-200 px-px">
                   {data.sprints.map((sprint) => (
                     <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
-                      <div className="text-sm font-semibold text-gray-800">
+                      <div className="font-semibold text-gray-800" style={{ fontSize: 13 }}>
                         {sprint.name ?? `Sprint ${sprint.number}`}
                       </div>
                       <div className="text-xs text-gray-500">
@@ -418,9 +422,12 @@ export function SortingFrameBoard({ initialData }: Props) {
                                   </span>
                                 </button>
 
-                                {/* Sprint cells — row below the team bar */}
+                                {/* Sprint cells — row below the team bar, tinted with VS colour */}
                                 {!teamCollapsed && (
-                                  <div className="flex divide-x divide-gray-200">
+                                  <div
+                                    className="flex divide-x divide-gray-200"
+                                    style={{ backgroundColor: vsColour.bg }}
+                                  >
                                     {data.sprints.map((sprint) => (
                                       <SprintColumn
                                         key={`${team.id}-${sprint.id}`}
@@ -430,7 +437,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         )}
                                         showHeader={false}
                                         searchTerm={search}
-                                        className="flex-1 min-w-0 bg-white p-2 min-h-[80px]"
+                                        className="flex-1 min-w-0 p-2 min-h-[80px]"
                                       />
                                     ))}
                                   </div>

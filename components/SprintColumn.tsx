@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Feature, Sprint } from '@/lib/models';
 import { formatSprintRange } from '@/lib/utils';
+import { Inbox } from 'lucide-react';
 import { FeatureCard } from '@/components/FeatureCard';
 
 type SprintColumnProps = {
@@ -43,10 +44,11 @@ export function SprintColumn({ sprint, features, searchTerm, showHeader = true, 
         ))}
       </SortableContext>
 
-      {/* Placeholder so empty cells maintain visual presence */}
+      {/* Ghost placeholder — structural indicator, barely-there */}
       {!showHeader && features.length === 0 && (
-        <div className="pointer-events-none flex min-h-[56px] items-center justify-center select-none text-xs text-gray-300">
-          Drop here
+        <div className="pointer-events-none flex min-h-[56px] select-none flex-col items-center justify-center gap-1">
+          <Inbox size={20} className="text-gray-200" />
+          <span className="text-gray-300" style={{ fontSize: 11 }}>Empty</span>
         </div>
       )}
     </div>
