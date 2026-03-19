@@ -20,7 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
 
-const SIDEBAR_EXPANDED = 180;
+const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 52;
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
@@ -179,7 +179,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                 ].join(' ')}
               >
                 <Icon size={16} className="shrink-0" />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
               </Link>
             );
           })}

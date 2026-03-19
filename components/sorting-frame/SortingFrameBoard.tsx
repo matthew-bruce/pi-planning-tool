@@ -244,35 +244,37 @@ export function SortingFrameBoard({ initialData }: Props) {
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-gray-900">Sorting Frame</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-semibold text-gray-900">Sorting Frame</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <select
+              className="rounded border px-2 py-1 text-sm"
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+            >
+              <option value="ALL">All platforms</option>
+              {data.availablePlatforms.map((platform) => (
+                <option key={platform} value={platform}>
+                  {platform}
+                </option>
+              ))}
+            </select>
+
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              style={{ minWidth: 260 }}
+              placeholder="Search ticket, title, team or platform"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="mt-0.5 text-sm text-gray-500">
           {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
           <span className="text-xs">
             {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
           </span>
         </p>
-      </div>
-
-      <div className="mb-4 flex gap-3">
-        <select
-          className="rounded border px-2 py-1"
-          value={platformFilter}
-          onChange={(e) => setPlatformFilter(e.target.value)}
-        >
-          <option value="ALL">All platforms</option>
-          {data.availablePlatforms.map((platform) => (
-            <option key={platform} value={platform}>
-              {platform}
-            </option>
-          ))}
-        </select>
-
-        <input
-          className="rounded border px-2 py-1"
-          placeholder="Search ticket, title, team or platform"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
       </div>
 
       <div className="flex">
@@ -331,10 +333,10 @@ export function SortingFrameBoard({ initialData }: Props) {
                 <div className="flex divide-x divide-gray-200 px-px">
                   {data.sprints.map((sprint) => (
                     <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
-                      <div className="font-semibold text-gray-800" style={{ fontSize: 13 }}>
+                      <div className="font-semibold text-gray-800" style={{ fontSize: 14 }}>
                         {sprint.name ?? `Sprint ${sprint.number}`}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-gray-500" style={{ fontSize: 11 }}>
                         {formatSprintRange(sprint.startDate, sprint.endDate)}
                       </div>
                     </div>
@@ -351,8 +353,8 @@ export function SortingFrameBoard({ initialData }: Props) {
                   return (
                     <section
                       key={initiative.id}
-                      className="rounded border overflow-hidden"
-                      style={{ borderColor: vsColour.bg, backgroundColor: vsColour.bg }}
+                      className="rounded border overflow-hidden bg-white"
+                      style={{ borderColor: vsColour.bg }}
                     >
                       {/* Value Stream section header — full width */}
                       <button
@@ -425,7 +427,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                       }))
                                     }
                                   >
-                                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-gray-800">
+                                    <span className="flex min-w-0 items-center gap-1.5">
                                       <ChevronDown
                                         size={12}
                                         className="shrink-0 text-gray-400"
@@ -435,9 +437,11 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         }}
                                       />
                                       <span className="truncate">
-                                        <Highlight text={team.name} term={search} />
+                                        <span className="font-medium text-gray-800" style={{ fontSize: 13 }}>
+                                          <Highlight text={team.name} term={search} />
+                                        </span>
                                         {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                          <span className="ml-1 font-normal text-gray-500">
+                                          <span className="ml-1 font-normal text-gray-400" style={{ fontSize: 11 }}>
                                             (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
                                           </span>
                                         )}
@@ -460,8 +464,8 @@ export function SortingFrameBoard({ initialData }: Props) {
                                   >
                                     <div style={{ overflow: 'hidden' }}>
                                       <div
-                                        className="flex divide-x divide-gray-200"
-                                        style={{ backgroundColor: vsColour.bg }}
+                                        className="flex divide-x divide-gray-200 bg-white"
+                                        style={{ borderLeft: `3px solid ${vsColour.text}` }}
                                       >
                                         {data.sprints.map((sprint) => (
                                           <SprintColumn
