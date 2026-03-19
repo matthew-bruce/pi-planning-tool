@@ -95,7 +95,6 @@ function isInDateRange(
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'dispatch_feed_open';
-const WIDTH_KEY   = 'dispatch_feed_width';
 const CLAMP_WIDTH = 'clamp(280px, 22vw, 420px)';
 const EMPTY_META: FeedMeta = { teams: [], arts: [], initiatives: [] };
 
@@ -118,7 +117,6 @@ export function ActivityFeedPanel() {
   // ── Event data ──────────────────────────────────────────────────────────────
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [cycleId, setCycleId] = useState<string | null>(null);
-  const [cycleName, setCycleName] = useState<string>('');
   const [meta, setMeta] = useState<FeedMeta>(EMPTY_META);
   const [hasUnread, setHasUnread] = useState(false);
   const [scrolledDown, setScrolledDown] = useState(false);
@@ -139,23 +137,18 @@ export function ActivityFeedPanel() {
   const [vsFilter,    setVsFilter]    = useState('');
 
   // ── Panel resize ────────────────────────────────────────────────────────────
-  const [panelWidth, setPanelWidth] = useState(320);
+  const [panelWidth, setPanelWidth] = useState(600);
   const [isFinePointer, setIsFinePointer] = useState(false);
-  const panelWidthRef = useRef(320);
+  const panelWidthRef = useRef(600);
 
   // ── Refs ────────────────────────────────────────────────────────────────────
   const feedRef = useRef<HTMLDivElement>(null);
   const latestTimestampRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Init: pointer + stored width ────────────────────────────────────────────
+  // ── Init: pointer ───────────────────────────────────────────────────────────
   useEffect(() => {
     setIsFinePointer(window.matchMedia('(pointer: fine)').matches);
-    const stored = localStorage.getItem(WIDTH_KEY);
-    if (stored) {
-      const w = parseInt(stored, 10);
-      if (w >= 280 && w <= 600) { setPanelWidth(w); panelWidthRef.current = w; }
-    }
   }, []);
 
   // ── Close type popover on outside click ─────────────────────────────────────
@@ -176,12 +169,10 @@ export function ActivityFeedPanel() {
     if (!res.ok) return;
     const data = (await res.json()) as {
       cycleId: string | null;
-      cycleName?: string;
       events: ActivityEvent[];
       meta?: FeedMeta;
     };
     if (data.cycleId) setCycleId(data.cycleId);
-    if (data.cycleName) setCycleName(data.cycleName);
     if (data.meta) setMeta(data.meta);
     const incoming = data.events;
     if (!incoming.length) return;
@@ -202,7 +193,12 @@ export function ActivityFeedPanel() {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(isOpen));
-    if (isOpen) { setHasUnread(false); setNewCount(0); }
+    if (isOpen) {
+      setHasUnread(false);
+      setNewCount(0);
+      setPanelWidth(600);
+      panelWidthRef.current = 600;
+    }
   }, [isOpen]);
 
   // ── Drag resize ─────────────────────────────────────────────────────────────
@@ -219,7 +215,6 @@ export function ActivityFeedPanel() {
     const onMouseUp = () => {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      localStorage.setItem(WIDTH_KEY, String(panelWidthRef.current));
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
@@ -348,10 +343,6 @@ export function ActivityFeedPanel() {
               </div>
               <button onClick={() => setIsOpen(false)} className="px-1 text-sm text-gray-400 hover:text-gray-700" title="Collapse">→</button>
             </div>
-
-            {cycleName && (
-              <div className="shrink-0 truncate border-b border-gray-100 px-3 py-1.5 text-xs text-gray-500">{cycleName}</div>
-            )}
 
             {/* ── Filter controls ──────────────────────────────────────────── */}
             <div className="shrink-0 border-b border-gray-100 px-3 py-2 space-y-2">
@@ -503,7 +494,15 @@ export function ActivityFeedPanel() {
 
             {/* Footer */}
             <div className="shrink-0 border-t border-gray-100 px-3 py-2">
-              <Link href="/activity" className="text-xs font-medium hover:underline" style={{ color: '#EE2722', fontSize: 12 }}>
+              <Link
+                href="/activity"
+                className="text-xs font-medium hover:underline"
+                style={{ color: '#EE2722', fontSize: 12 }}
+                onClick={() => {
+                  setIsOpen(false);
+                  localStorage.setItem(STORAGE_KEY, 'false');
+                }}
+              >
                 Open full screen →
               </Link>
             </div>

@@ -55,10 +55,7 @@ type DbTeam = {
   platform_id: string | null;
   team_type: string | null;
   is_active: boolean;
-  platforms?: Array<{
-    id: string;
-    name: string;
-  }> | null;
+  platforms?: { id: string; name: string } | null;
 };
 
 type DbStoryCount = {
@@ -374,7 +371,7 @@ export async function getSortingFrameData(input: {
           const team = teamById.get(teamId);
           if (!team) return null;
 
-          const platform = team.platforms?.[0]?.name ?? null;
+          const platform = team.platforms?.name ?? null;
           if (platform) platformSet.add(platform);
 
           return {
