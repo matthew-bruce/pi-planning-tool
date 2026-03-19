@@ -116,8 +116,15 @@ export function SortingFrameBoard({ initialData }: Props) {
           .map((team) => ({
             ...team,
             features: team.features.filter((feature) => {
-              const target = `${feature.ticketKey} ${feature.title}`.toLowerCase();
-              return target.includes(lower);
+              if (!lower) return true;
+              const haystack = [
+                feature.ticketKey,
+                feature.title,
+                team.name,
+                team.platform ?? '',
+                team.teamType ?? '',
+              ].join(' ').toLowerCase();
+              return haystack.includes(lower);
             }),
           }))
           .filter((team) => team.features.length > 0);
@@ -239,7 +246,7 @@ export function SortingFrameBoard({ initialData }: Props) {
 
         <input
           className="rounded border px-2 py-1"
-          placeholder="Search ticket/title"
+          placeholder="Search ticket, title, team or platform"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -307,7 +314,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                     </div>
                     <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
                       Teams {initiative.summary.teamsCount} • Features{' '}
-                      {initiative.summary.featuresCount} • Deps{' '}
+                      {initiative.summary.featuresCount} • Dependencies{' '}
                       {initiative.summary.dependencyCount} • Conflicts{' '}
                       {initiative.summary.conflictCount}
                     </span>
