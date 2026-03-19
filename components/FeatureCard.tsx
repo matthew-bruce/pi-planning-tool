@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertTriangle, FileText } from 'lucide-react';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { highlightMatch } from '@/lib/highlightMatch';
+import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 
 type FeatureCardProps = {
   feature: Feature;
@@ -43,6 +45,8 @@ function getDepBadge(counts: Feature['dependencyCounts']) {
   const total = counts.requires + counts.blocks + counts.conflict;
   if (total === 0) return null;
 
+  // Colour by highest criticality: conflict (high) → red, blocks (medium) → amber,
+  // requires (low) → green.
   let cls = 'bg-gray-100 text-gray-600';
   if (counts.conflict > 0)      cls = 'bg-red-100 text-red-700';
   else if (counts.blocks > 0)   cls = 'bg-amber-100 text-amber-700';
@@ -51,12 +55,16 @@ function getDepBadge(counts: Feature['dependencyCounts']) {
   return { total, cls };
 }
 
-function getSourceBadge(sourceSystem: string | null | undefined) {
+// Returns badge label + Tailwind class string, styled by source system.
+function getSourceBadge(
+  sourceSystem: string | null | undefined
+): { label: string; cls: string } | null {
   if (!sourceSystem) return null;
   const s = sourceSystem.toLowerCase();
-  if (s.includes('jira')) return 'JIRA';
-  if (s.includes('ado') || s.includes('azure')) return 'ADO';
-  return sourceSystem.toUpperCase().slice(0, 6);
+  if (s.includes('jira'))                    return { label: 'JIRA', cls: 'bg-cyan-50 text-cyan-700' };
+  if (s.includes('ado') || s.includes('azure')) return { label: 'ADO',  cls: 'bg-blue-50 text-blue-600' };
+  // CSV, manual, or other import sources
+  return { label: sourceSystem.toUpperCase().slice(0, 6), cls: 'bg-gray-100 text-gray-500' };
 }
 
 // Maps story workflow status to a colour.
@@ -83,9 +91,8 @@ function StatusDot({ status, size = 8 }: { status: string | null; size?: number 
   );
 }
 
-// ── Part 1 — Story-sprint distribution dots ────────────────────────────────
-// Shown in Detailed mode only. Hidden when all stories are in the same sprint
-// as the parent feature (not interesting information).
+// Story-sprint distribution dots — Detailed mode only.
+// Suppressed when all stories are in the same sprint as the parent feature.
 function StorySprintDots({
   stories,
   featureSprintNumber,
@@ -150,8 +157,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
       data: { featureId: feature.id },
     });
 
-  // Transform/transition applied to the outer wrapper so the full block
-  // (card + expanded story panel) moves together during drag.
+  // Transform/transition on the outer wrapper so card + story panel move together.
   const wrapperStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -171,57 +177,67 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
         {...listeners}
         className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
       >
-        {/* Ticket key */}
-        <div className="truncate text-xs font-semibold text-red-700">
-          {feature.sourceUrl ? (
-            <a
-              href={feature.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
+        {/* Header row: ticket key (left) + source system badge (right).
+            Source badge is always visible — both compact and detailed. */}
+        <div className="flex items-start justify-between gap-1">
+          <div className="min-w-0 flex-1 truncate text-xs font-semibold text-red-700">
+            {feature.sourceUrl ? (
+              <a
+                href={feature.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                <Highlight text={feature.ticketKey} term={searchTerm} />
+              </a>
+            ) : (
               <Highlight text={feature.ticketKey} term={searchTerm} />
-            </a>
-          ) : (
-            <Highlight text={feature.ticketKey} term={searchTerm} />
+            )}
+          </div>
+
+          {sourceBadge && (
+            <span
+              className={`shrink-0 font-medium ${sourceBadge.cls}`}
+              style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4 }}
+            >
+              {sourceBadge.label}
+            </span>
           )}
         </div>
-
-        {/* Source system badge — hidden in compact */}
-        {!isCompact && sourceBadge && (
-          <div className="text-gray-400" style={{ fontSize: 9 }}>
-            {sourceBadge}
-          </div>
-        )}
 
         {/* Title */}
         <div className="mt-1 text-sm font-medium leading-snug text-gray-900">
           <Highlight text={feature.title} term={searchTerm} />
         </div>
 
-        {/* Commitment status + story count + dep badge */}
+        {/* Bottom row: commitment pill + story count + dep badge.
+            Story count: detailed only. Dep badge: always visible. */}
         <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
           <span className={`rounded-full px-2 py-0.5 font-medium ${statusPill.cls}`}>
             {statusPill.label}
           </span>
 
+          {/* Story count — FileText icon, detailed only */}
           {!isCompact && typeof feature.storyCount === 'number' && feature.storyCount > 0 && (
             <span
-              className="rounded bg-gray-100 px-2 py-0.5 text-gray-600"
+              className="flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-gray-600"
               title={`${feature.storyCount} ${feature.storyCount === 1 ? 'story' : 'stories'} linked to this feature`}
             >
-              📦 {feature.storyCount}
+              <FileText size={14} />
+              {feature.storyCount}
             </span>
           )}
 
-          {!isCompact && depBadge && (
-            <span className={`rounded px-2 py-0.5 font-medium ${depBadge.cls}`}>
-              🔗 {depBadge.total} dep{depBadge.total !== 1 ? 's' : ''}
+          {/* Dependency badge — AlertTriangle icon, always visible */}
+          {depBadge && (
+            <span className={`flex items-center gap-1 rounded px-2 py-0.5 font-medium ${depBadge.cls}`}>
+              <AlertTriangle size={12} />
+              {depBadge.total} dep{depBadge.total !== 1 ? 's' : ''}
             </span>
           )}
         </div>
 
-        {/* ── Part 1: Story-sprint dot indicator ── detailed only */}
+        {/* Story-sprint dot indicator — detailed only */}
         {!isCompact && stories.length > 0 && (
           <StorySprintDots
             stories={stories}
@@ -229,7 +245,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
           />
         )}
 
-        {/* ── Part 2: Story expand toggle ── detailed only */}
+        {/* Story expand toggle — detailed only */}
         {!isCompact && stories.length > 0 && (
           <button
             className="mt-2 flex w-full items-center gap-1 text-gray-400 hover:text-gray-600"
@@ -254,7 +270,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
         )}
       </div>
 
-      {/* ── Part 2: Expandable story panel ── below card, animated ────── */}
+      {/* ── Expandable story panel ── below card, animated ─────────────── */}
       {!isCompact && stories.length > 0 && (
         <div
           style={{
@@ -279,9 +295,9 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                     {story.ticketKey}
                   </span>
 
-                  {/* Story title */}
+                  {/* Story title — feature prefix stripped if present */}
                   <span className="flex-1 truncate text-gray-700" style={{ fontSize: 12 }}>
-                    {story.title}
+                    {stripFeaturePrefix(story.title, feature.title)}
                   </span>
 
                   {/* Sprint badge — only when story sprint differs from feature sprint */}
