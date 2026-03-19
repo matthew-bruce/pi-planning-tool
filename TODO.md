@@ -767,3 +767,42 @@ These were identified after the first successful load of the gold demo dataset.
   - Same filter chips as panel version
   - Link from Activity Feed panel: "Open full screen →"
   - Accessible without login during PoC phase
+
+---
+
+## 📱 Mobile & PWA Sprint (dedicated future sprint)
+
+> Do not start this until the app is working well on large screens.
+> This is a dedicated sprint — not individual tickets mixed with other work.
+
+**Philosophy: adaptive design, not responsive squishing.**
+The Sorting Frame cannot be made to work on mobile by scaling — it needs 
+a completely different view. Design for mobile contexts, not against them.
+
+### PWA Foundation (low effort, high value — do first)
+- [ ] Add `next-pwa` package — makes app installable on iOS/Android home screen
+- [ ] Add web manifest (`public/manifest.json`) with RMG branding
+- [ ] Configure service worker for shell caching
+- [ ] Test installation on iOS Safari and Android Chrome
+
+### Mobile-specific views
+
+| Surface | Mobile treatment |
+|---|---|
+| **Dashboard** | Stacked KPI cards, scrollable — already close to working |
+| **Activity Feed** | Full screen — best mobile surface, killer use case |
+| **Sorting Frame** | Read-only drill-down: VS list → tap VS → team list → tap team → feature list. No board on mobile. |
+| **Dependencies** | List view with dependency cards instead of reactflow graph |
+| **Team Planning** | Single sprint view with left/right swipe between sprints |
+| **Admin** | Desktop only — show "best experienced on desktop" notice |
+
+### Navigation
+- Collapsed sidebar automatic on mobile (<768px)
+- Bottom tab bar on mobile for primary nav items (Sorting Frame, Dashboard, Activity, Dependencies)
+- Consistent with native mobile app patterns
+
+### Future consideration — native app
+- Next.js + PWA is the right stack — no rewrite needed
+- PWA gives: home screen install, push notifications, offline shell
+- True native (React Native) only if PWA proves insufficient
+- Evaluate after PWA sprint based on user feedback
