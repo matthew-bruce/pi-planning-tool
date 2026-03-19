@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { highlightMatch } from '@/lib/highlightMatch';
+import { formatSprintRange } from '@/lib/utils';
 import {
   DndContext,
   DragEndEvent,
@@ -56,6 +57,8 @@ function formatTeamType(teamType: string): string {
 function getVsColour(index: number) {
   return VS_COLOURS[index % VS_COLOURS.length];
 }
+
+const TEAM_COL_W = 200;
 
 export function SortingFrameBoard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
@@ -274,7 +277,7 @@ export function SortingFrameBoard({ initialData }: Props) {
       </div>
 
       <div className="flex">
-        <div className="flex-1 space-y-4 overflow-x-auto pr-3">
+        <div className="flex-1 overflow-x-auto pr-3">
           {!filteredInitiatives.length ? (
             <section className="rounded border border-gray-200 bg-white">
               <div className="border-b border-gray-200 bg-gray-50 p-3">
@@ -293,9 +296,9 @@ export function SortingFrameBoard({ initialData }: Props) {
                   You can still review the sprint layout for {data.cycle.name}.
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 pb-1">
                   {emptyBoardColumns.map((sprint) => (
-                    <div key={sprint.id} className="min-w-64">
+                    <div key={sprint.id} className="w-64 shrink-0">
                       <SprintColumn sprint={sprint} features={[]} />
                       <div className="mt-2 rounded border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
                         No planned features
@@ -306,100 +309,121 @@ export function SortingFrameBoard({ initialData }: Props) {
               </div>
             </section>
           ) : (
-            filteredInitiatives.map((initiative, initiativeIndex) => {
-              const vsColour = getVsColour(initiativeIndex);
-              const collapsed = collapsedInitiatives[initiative.id];
-
-              return (
-                <section
-                  key={initiative.id}
-                  className="rounded border overflow-hidden"
-                  style={{ borderColor: vsColour.bg, backgroundColor: vsColour.bg }}
-                >
-                  {/* Value Stream section header */}
-                  <button
-                    className="flex w-full items-center justify-between p-2 text-left"
-                    style={{ backgroundColor: vsColour.bg }}
-                    onClick={() =>
-                      setCollapsedInitiatives((prev) => ({
-                        ...prev,
-                        [initiative.id]: !prev[initiative.id],
-                      }))
-                    }
-                  >
-                    <div className="flex items-center gap-2">
-                      {collapsed ? <ChevronRight size={14} style={{ color: vsColour.text }} /> : <ChevronDown size={14} style={{ color: vsColour.text }} />}
-                      <span className="font-semibold" style={{ color: vsColour.text }}>
-                        {initiative.name}
-                      </span>
+            <>
+              {/* Sticky sprint header — appears once above all VS sections */}
+              <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm mb-2">
+                <div className="flex gap-2 py-2">
+                  {/* Spacer matching team label column width */}
+                  <div style={{ width: TEAM_COL_W, flexShrink: 0 }} />
+                  {data.sprints.map((sprint) => (
+                    <div key={sprint.id} style={{ width: 256, flexShrink: 0 }} className="px-2">
+                      <div className="text-sm font-semibold text-gray-800">
+                        {sprint.name ?? `Sprint ${sprint.number}`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatSprintRange(sprint.startDate, sprint.endDate)}
+                      </div>
                     </div>
-                    <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
-                      Teams {initiative.summary.teamsCount} • Features{' '}
-                      {initiative.summary.featuresCount} • Dependencies{' '}
-                      {initiative.summary.dependencyCount} • Conflicts{' '}
-                      {initiative.summary.conflictCount}
-                    </span>
-                  </button>
+                  ))}
+                </div>
+              </div>
 
-                  {!collapsed && (
-                    <div className="space-y-4 p-3">
-                      {initiative.teams.map((team) => {
-                        const teamKey = `${initiative.id}-${team.id}`;
-                        const teamCollapsed = collapsedTeams[teamKey];
+              {/* VS sections */}
+              <div className="space-y-4">
+                {filteredInitiatives.map((initiative, initiativeIndex) => {
+                  const vsColour = getVsColour(initiativeIndex);
+                  const collapsed = collapsedInitiatives[initiative.id];
 
-                        return (
-                          <div key={team.id}>
-                            {/* Team swimlane header — white bg, VS colour left border */}
-                            <button
-                              className="mb-2 flex w-full items-center justify-between rounded border border-gray-200 bg-white px-3 py-1.5 text-left"
-                              style={{
-                                borderLeftWidth: 3,
-                                borderLeftColor: vsColour.text,
-                                fontWeight: 500,
-                              }}
-                              onClick={() =>
-                                setCollapsedTeams((prev) => ({
-                                  ...prev,
-                                  [teamKey]: !prev[teamKey],
-                                }))
-                              }
-                            >
-                              <span className="text-sm font-medium text-gray-800 flex items-center gap-1">
-                                {teamCollapsed ? <ChevronRight size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
-                                <Highlight text={team.name} term={search} />{' '}
-                                {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                  <span className="text-xs text-gray-500 font-normal">
-                                    (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {team.features.length} features
-                              </span>
-                            </button>
+                  return (
+                    <section
+                      key={initiative.id}
+                      className="rounded border overflow-hidden"
+                      style={{ borderColor: vsColour.bg, backgroundColor: vsColour.bg }}
+                    >
+                      {/* Value Stream section header — full width */}
+                      <button
+                        className="flex w-full items-center justify-between p-2 text-left"
+                        style={{ backgroundColor: vsColour.bg }}
+                        onClick={() =>
+                          setCollapsedInitiatives((prev) => ({
+                            ...prev,
+                            [initiative.id]: !prev[initiative.id],
+                          }))
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          {collapsed ? <ChevronRight size={14} style={{ color: vsColour.text }} /> : <ChevronDown size={14} style={{ color: vsColour.text }} />}
+                          <span className="font-semibold" style={{ color: vsColour.text }}>
+                            {initiative.name}
+                          </span>
+                        </div>
+                        <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
+                          Teams {initiative.summary.teamsCount} • Features{' '}
+                          {initiative.summary.featuresCount} • Dependencies{' '}
+                          {initiative.summary.dependencyCount} • Conflicts{' '}
+                          {initiative.summary.conflictCount}
+                        </span>
+                      </button>
 
-                            {!teamCollapsed && (
-                              <div className="flex gap-2 overflow-x-auto pb-1">
-                                {data.sprints.map((sprint) => (
+                      {!collapsed && (
+                        <div className="space-y-1 p-2">
+                          {initiative.teams.map((team) => {
+                            const teamKey = `${initiative.id}-${team.id}`;
+                            const teamCollapsed = collapsedTeams[teamKey];
+
+                            return (
+                              <div key={team.id} className="flex gap-2 items-start">
+                                {/* Team label cell — fixed width, collapses the row */}
+                                <div style={{ width: TEAM_COL_W, flexShrink: 0 }}>
+                                  <button
+                                    className="flex w-full items-center justify-between rounded border border-gray-200 bg-white px-2 py-1.5 text-left"
+                                    style={{ borderLeftWidth: 3, borderLeftColor: vsColour.text }}
+                                    onClick={() =>
+                                      setCollapsedTeams((prev) => ({
+                                        ...prev,
+                                        [teamKey]: !prev[teamKey],
+                                      }))
+                                    }
+                                  >
+                                    <span className="text-xs font-medium text-gray-800 flex items-center gap-1 min-w-0">
+                                      {teamCollapsed ? <ChevronRight size={12} className="text-gray-400 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
+                                      <span className="truncate">
+                                        <Highlight text={team.name} term={search} />
+                                        {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
+                                          <span className="text-xs text-gray-500 font-normal ml-0.5">
+                                            (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
+                                          </span>
+                                        )}
+                                      </span>
+                                    </span>
+                                    <span className="text-xs text-gray-500 shrink-0 ml-1">
+                                      {team.features.length}
+                                    </span>
+                                  </button>
+                                </div>
+
+                                {/* Sprint columns — hidden when team is collapsed */}
+                                {!teamCollapsed && data.sprints.map((sprint) => (
                                   <SprintColumn
                                     key={`${team.id}-${sprint.id}`}
                                     sprint={sprint}
                                     features={team.features.filter(
                                       (feature) => feature.sprintId === sprint.id
                                     )}
+                                    showHeader={false}
                                     searchTerm={search}
                                   />
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })
+                            );
+                          })}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 

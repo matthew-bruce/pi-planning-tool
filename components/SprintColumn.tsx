@@ -10,9 +10,10 @@ type SprintColumnProps = {
   sprint: Sprint;
   features: Feature[];
   searchTerm?: string;
+  showHeader?: boolean;
 };
 
-export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps) {
+export function SprintColumn({ sprint, features, searchTerm, showHeader = true }: SprintColumnProps) {
   const { setNodeRef } = useDroppable({ id: sprint.id });
 
   const sprintLabel = sprint.name ?? `Sprint ${sprint.number}`;
@@ -20,13 +21,16 @@ export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps
   return (
     <div
       ref={setNodeRef}
-      className="min-w-64 rounded border border-gray-200 bg-white p-2"
+      className="w-64 shrink-0 rounded border border-gray-200 bg-white p-2"
     >
-      <h4 className="font-semibold">{sprintLabel}</h4>
-
-      <p className="mb-2 text-xs text-gray-500">
-        {formatSprintRange(sprint.startDate, sprint.endDate)}
-      </p>
+      {showHeader && (
+        <>
+          <h4 className="font-semibold">{sprintLabel}</h4>
+          <p className="mb-2 text-xs text-gray-500">
+            {formatSprintRange(sprint.startDate, sprint.endDate)}
+          </p>
+        </>
+      )}
 
       <SortableContext
         items={features.map((feature) => feature.id)}
