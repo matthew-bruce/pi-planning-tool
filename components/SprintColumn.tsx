@@ -11,9 +11,11 @@ type SprintColumnProps = {
   features: Feature[];
   searchTerm?: string;
   showHeader?: boolean;
+  /** Override the root element's className. Defaults to a standalone card style. */
+  className?: string;
 };
 
-export function SprintColumn({ sprint, features, searchTerm, showHeader = true }: SprintColumnProps) {
+export function SprintColumn({ sprint, features, searchTerm, showHeader = true, className }: SprintColumnProps) {
   const { setNodeRef } = useDroppable({ id: sprint.id });
 
   const sprintLabel = sprint.name ?? `Sprint ${sprint.number}`;
@@ -21,7 +23,7 @@ export function SprintColumn({ sprint, features, searchTerm, showHeader = true }
   return (
     <div
       ref={setNodeRef}
-      className="w-64 shrink-0 rounded border border-gray-200 bg-white p-2"
+      className={className ?? 'w-64 shrink-0 rounded border border-gray-200 bg-white p-2'}
     >
       {showHeader && (
         <>
@@ -40,6 +42,13 @@ export function SprintColumn({ sprint, features, searchTerm, showHeader = true }
           <FeatureCard key={feature.id} feature={feature} searchTerm={searchTerm} />
         ))}
       </SortableContext>
+
+      {/* Placeholder so empty cells maintain visual presence */}
+      {!showHeader && features.length === 0 && (
+        <div className="pointer-events-none flex min-h-[56px] items-center justify-center select-none text-xs text-gray-300">
+          Drop here
+        </div>
+      )}
     </div>
   );
 }

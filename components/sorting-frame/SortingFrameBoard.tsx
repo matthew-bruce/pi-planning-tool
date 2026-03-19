@@ -58,7 +58,6 @@ function getVsColour(index: number) {
   return VS_COLOURS[index % VS_COLOURS.length];
 }
 
-const TEAM_COL_W = 200;
 
 export function SortingFrameBoard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
@@ -277,7 +276,12 @@ export function SortingFrameBoard({ initialData }: Props) {
       </div>
 
       <div className="flex">
-        <div className="flex-1 overflow-x-auto pr-3">
+        {/*
+          Board content wrapper — NO overflow-x here so that position:sticky on
+          the sprint header works relative to the page scroll (not a sub-container).
+          Sprint columns use flex-1 so they fill available width without overflowing.
+        */}
+        <div className="min-w-0 flex-1 pr-3">
           {!filteredInitiatives.length ? (
             <section className="rounded border border-gray-200 bg-white">
               <div className="border-b border-gray-200 bg-gray-50 p-3">
@@ -310,13 +314,21 @@ export function SortingFrameBoard({ initialData }: Props) {
             </section>
           ) : (
             <>
-              {/* Sticky sprint header — appears once above all VS sections */}
-              <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm mb-2">
-                <div className="flex gap-2 py-2">
-                  {/* Spacer matching team label column width */}
-                  <div style={{ width: TEAM_COL_W, flexShrink: 0 }} />
+              {/*
+                Sticky sprint header — shown once, sticks to viewport top as the
+                user scrolls through VS sections.
+
+                top-0: planning header is not fixed/sticky so viewport top is correct.
+                z-30:  above VS section stacking contexts (sections use overflow:hidden).
+                The flex layout (w-40 spacer + flex-1 cells) mirrors every team row
+                exactly so vertical dividers align perfectly.
+              */}
+              <div className="sticky top-0 z-30 mb-2 border-b border-gray-200 bg-white shadow-sm">
+                <div className="flex divide-x divide-gray-200">
+                  {/* Spacer — same width as team label cells (w-40 = 160px) */}
+                  <div className="w-40 shrink-0 px-2 py-2" />
                   {data.sprints.map((sprint) => (
-                    <div key={sprint.id} style={{ width: 256, flexShrink: 0 }} className="px-2">
+                    <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
                       <div className="text-sm font-semibold text-gray-800">
                         {sprint.name ?? `Sprint ${sprint.number}`}
                       </div>
@@ -366,43 +378,52 @@ export function SortingFrameBoard({ initialData }: Props) {
                       </button>
 
                       {!collapsed && (
-                        <div className="space-y-1 p-2">
+                        /*
+                          Team rows — divide-y adds horizontal separator between rows.
+                          Each row uses divide-x so vertical column dividers align with
+                          the sticky header's divide-x cells above.
+                        */
+                        <div className="divide-y divide-gray-200">
                           {initiative.teams.map((team) => {
                             const teamKey = `${initiative.id}-${team.id}`;
                             const teamCollapsed = collapsedTeams[teamKey];
 
                             return (
-                              <div key={team.id} className="flex gap-2 items-start">
-                                {/* Team label cell — fixed width, collapses the row */}
-                                <div style={{ width: TEAM_COL_W, flexShrink: 0 }}>
-                                  <button
-                                    className="flex w-full items-center justify-between rounded border border-gray-200 bg-white px-2 py-1.5 text-left"
-                                    style={{ borderLeftWidth: 3, borderLeftColor: vsColour.text }}
-                                    onClick={() =>
-                                      setCollapsedTeams((prev) => ({
-                                        ...prev,
-                                        [teamKey]: !prev[teamKey],
-                                      }))
-                                    }
-                                  >
-                                    <span className="text-xs font-medium text-gray-800 flex items-center gap-1 min-w-0">
-                                      {teamCollapsed ? <ChevronRight size={12} className="text-gray-400 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
-                                      <span className="truncate">
-                                        <Highlight text={team.name} term={search} />
-                                        {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                          <span className="text-xs text-gray-500 font-normal ml-0.5">
-                                            (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
-                                          </span>
-                                        )}
-                                      </span>
+                              <div key={team.id} className="flex items-stretch divide-x divide-gray-200">
+                                {/*
+                                  Team label — first flex child (no left border from divide-x).
+                                  w-40 = 160px, matches the spacer in the sticky header.
+                                  VS colour left accent replaces the old card border.
+                                */}
+                                <button
+                                  className="w-40 shrink-0 flex items-center justify-between bg-white px-2 py-1.5 text-left"
+                                  style={{ borderLeft: `3px solid ${vsColour.text}` }}
+                                  onClick={() =>
+                                    setCollapsedTeams((prev) => ({
+                                      ...prev,
+                                      [teamKey]: !prev[teamKey],
+                                    }))
+                                  }
+                                >
+                                  <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-gray-800">
+                                    {teamCollapsed
+                                      ? <ChevronRight size={12} className="shrink-0 text-gray-400" />
+                                      : <ChevronDown size={12} className="shrink-0 text-gray-400" />}
+                                    <span className="truncate">
+                                      <Highlight text={team.name} term={search} />
+                                      {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
+                                        <span className="ml-0.5 font-normal text-gray-500">
+                                          (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
+                                        </span>
+                                      )}
                                     </span>
-                                    <span className="text-xs text-gray-500 shrink-0 ml-1">
-                                      {team.features.length}
-                                    </span>
-                                  </button>
-                                </div>
+                                  </span>
+                                  <span className="ml-1 shrink-0 text-xs text-gray-500">
+                                    {team.features.length}
+                                  </span>
+                                </button>
 
-                                {/* Sprint columns — hidden when team is collapsed */}
+                                {/* Sprint cells — flex-1 so they share remaining width equally */}
                                 {!teamCollapsed && data.sprints.map((sprint) => (
                                   <SprintColumn
                                     key={`${team.id}-${sprint.id}`}
@@ -412,6 +433,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                     )}
                                     showHeader={false}
                                     searchTerm={search}
+                                    className="flex-1 min-w-0 bg-white p-2 min-h-[80px]"
                                   />
                                 ))}
                               </div>
