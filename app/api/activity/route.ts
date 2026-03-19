@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       cycleId: cycle.id,
       cycleName: cycle.name,
+      cycleStartDate: cycle.start_date,
+      cycleEndDate: cycle.end_date,
       events: rows.map((row) => ({
         id: row.id,
         eventType: row.event_type,
@@ -115,6 +117,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     cycleId: cycle.id,
     cycleName: cycle.name,
+    cycleStartDate: cycle.start_date,
+    cycleEndDate: cycle.end_date,
     events,
     meta: { teams: [], arts: [], initiatives: [] },
   });

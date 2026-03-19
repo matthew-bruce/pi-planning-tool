@@ -145,6 +145,7 @@ export function ActivityFeedPanel() {
   const feedRef = useRef<HTMLDivElement>(null);
   const latestTimestampRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const datesInitializedRef = useRef(false);
 
   // ── Init: pointer ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -169,11 +170,18 @@ export function ActivityFeedPanel() {
     if (!res.ok) return;
     const data = (await res.json()) as {
       cycleId: string | null;
+      cycleStartDate?: string;
+      cycleEndDate?: string;
       events: ActivityEvent[];
       meta?: FeedMeta;
     };
     if (data.cycleId) setCycleId(data.cycleId);
     if (data.meta) setMeta(data.meta);
+    if (!datesInitializedRef.current && data.cycleStartDate && data.cycleEndDate) {
+      datesInitializedRef.current = true;
+      setDateFrom(data.cycleStartDate.slice(0, 10));
+      setDateTo(data.cycleEndDate.slice(0, 10));
+    }
     const incoming = data.events;
     if (!incoming.length) return;
     const latestKnown = latestTimestampRef.current;
@@ -347,40 +355,7 @@ export function ActivityFeedPanel() {
             {/* ── Filter controls ──────────────────────────────────────────── */}
             <div className="shrink-0 border-b border-gray-100 px-3 py-2 space-y-2">
 
-              {/* Row 1: Type button + Clear all */}
-              <div className="flex items-center justify-between gap-2">
-                {/* Type popover */}
-                <div ref={typeRef} className="relative">
-                  <button
-                    onClick={() => setTypeOpen((o) => !o)}
-                    className="rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                  >
-                    {typeLabel}
-                  </button>
-                  {typeOpen && (
-                    <div className="absolute left-0 top-full z-50 mt-1 rounded border border-gray-200 bg-white shadow-lg" style={{ minWidth: 180 }}>
-                      {/* All / None row */}
-                      <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-1.5">
-                        <button onClick={() => setHiddenCategories(new Set())} className="text-xs text-royalRed hover:underline">All</button>
-                        <span className="text-gray-300">|</span>
-                        <button onClick={() => setHiddenCategories(new Set(POPOVER_CATEGORIES))} className="text-xs text-royalRed hover:underline">None</button>
-                      </div>
-                      {POPOVER_CATEGORIES.map((cat) => (
-                        <label key={cat} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-gray-50">
-                          <input type="checkbox" checked={!hiddenCategories.has(cat)} onChange={() => toggleCategory(cat)} style={{ accentColor: CATEGORY_COLOURS[cat] }} />
-                          <span className="text-sm text-gray-700">{cat}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {hasActiveFilter && (
-                  <button onClick={clearAllFilters} className="text-xs text-royalRed hover:underline">Clear all</button>
-                )}
-              </div>
-
-              {/* Row 2: Date range */}
+              {/* Row 1: Date range */}
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -416,24 +391,55 @@ export function ActivityFeedPanel() {
                 </div>
               </div>
 
-              {/* Row 3-4: Entity dropdowns */}
+              {/* Row 2-3: Entity dropdowns (ART → Platform → VS → Team) */}
               <div className="grid grid-cols-2 gap-1.5">
-                <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={selectCls}>
-                  <option value="">All teams</option>
-                  {meta.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <select value={artFilter} onChange={(e) => setArtFilter(e.target.value)} className={selectCls}>
+                  <option value="">All ARTs</option>
+                  {meta.arts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
                 <select value={platFilter} onChange={(e) => setPlatFilter(e.target.value)} className={selectCls}>
                   <option value="">All platforms</option>
                   {availablePlatforms.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
-                <select value={artFilter} onChange={(e) => setArtFilter(e.target.value)} className={selectCls}>
-                  <option value="">All ARTs</option>
-                  {meta.arts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
                 <select value={vsFilter} onChange={(e) => setVsFilter(e.target.value)} className={selectCls}>
                   <option value="">All VS</option>
                   {meta.initiatives.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
+                <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={selectCls}>
+                  <option value="">All teams</option>
+                  {meta.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+
+              {/* Row 4: Type inline with Clear all */}
+              <div className="flex items-center justify-between gap-2">
+                <div ref={typeRef} className="relative">
+                  <button
+                    onClick={() => setTypeOpen((o) => !o)}
+                    className="rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    {typeLabel}
+                  </button>
+                  {typeOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 rounded border border-gray-200 bg-white shadow-lg" style={{ minWidth: 180 }}>
+                      <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-1.5">
+                        <button onClick={() => setHiddenCategories(new Set())} className="text-xs text-royalRed hover:underline">All</button>
+                        <span className="text-gray-300">|</span>
+                        <button onClick={() => setHiddenCategories(new Set(POPOVER_CATEGORIES))} className="text-xs text-royalRed hover:underline">None</button>
+                      </div>
+                      {POPOVER_CATEGORIES.map((cat) => (
+                        <label key={cat} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-gray-50">
+                          <input type="checkbox" checked={!hiddenCategories.has(cat)} onChange={() => toggleCategory(cat)} style={{ accentColor: CATEGORY_COLOURS[cat] }} />
+                          <span className="text-sm text-gray-700">{cat}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {hasActiveFilter && (
+                  <button onClick={clearAllFilters} className="text-xs text-royalRed hover:underline">Clear all</button>
+                )}
               </div>
 
               {/* Result count */}

@@ -100,8 +100,9 @@ export default function ActivityPage() {
   const [artFilter,  setArtFilter]  = useState('');
   const [vsFilter,   setVsFilter]   = useState('');
 
-  const feedRef     = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const feedRef            = useRef<HTMLDivElement>(null);
+  const intervalRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const datesInitializedRef = useRef(false);
 
   // Close type popover on outside click
   useEffect(() => {
@@ -119,12 +120,21 @@ export default function ActivityPage() {
     const res = await fetch(`/api/activity?${params.toString()}`);
     if (!res.ok) return;
     const data = (await res.json()) as {
-      cycleId: string | null; cycleName?: string;
-      events: ActivityEvent[]; meta?: FeedMeta;
+      cycleId: string | null;
+      cycleName?: string;
+      cycleStartDate?: string;
+      cycleEndDate?: string;
+      events: ActivityEvent[];
+      meta?: FeedMeta;
     };
     if (data.cycleId) setCycleId(data.cycleId);
     if (data.cycleName) setCycleName(data.cycleName);
     if (data.meta) setMeta(data.meta);
+    if (!datesInitializedRef.current && data.cycleStartDate && data.cycleEndDate) {
+      datesInitializedRef.current = true;
+      setDateFrom(data.cycleStartDate.slice(0, 10));
+      setDateTo(data.cycleEndDate.slice(0, 10));
+    }
     setEvents(data.events);
   }, []);
 
@@ -186,47 +196,21 @@ export default function ActivityPage() {
     <div className="min-h-screen bg-surfaceSubtle">
       {/* Page header */}
       <header className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="mx-auto max-w-5xl flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Live Activity Feed</h1>
-              {cycleName && <p className="mt-0.5 text-sm text-gray-500">{cycleName}</p>}
-            </div>
-            <span className="ml-1 animate-pulse rounded-full" style={{ width: 8, height: 8, backgroundColor: '#16a34a', display: 'inline-block', flexShrink: 0 }} />
+        <div className="mx-auto max-w-5xl flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Live Activity Feed</h1>
+            {cycleName && <p className="mt-0.5 text-sm text-gray-500">{cycleName}</p>}
           </div>
-
-          {/* Type popover */}
-          <div ref={typeRef} className="relative">
-            <button
-              onClick={() => setTypeOpen((o) => !o)}
-              className="rounded border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              {typeLabel}
-            </button>
-            {typeOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 rounded border border-gray-200 bg-white shadow-lg" style={{ minWidth: 200 }}>
-                <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2">
-                  <button onClick={() => setHiddenCategories(new Set())} className="text-xs text-royalRed hover:underline">All</button>
-                  <span className="text-gray-300">|</span>
-                  <button onClick={() => setHiddenCategories(new Set(POPOVER_CATEGORIES))} className="text-xs text-royalRed hover:underline">None</button>
-                </div>
-                {POPOVER_CATEGORIES.map((cat) => (
-                  <label key={cat} className="flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50">
-                    <input type="checkbox" checked={!hiddenCategories.has(cat)} onChange={() => toggleCategory(cat)} style={{ accentColor: CATEGORY_COLOURS[cat] }} />
-                    <span className="text-sm text-gray-700">{cat}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <span className="ml-1 animate-pulse rounded-full" style={{ width: 8, height: 8, backgroundColor: '#16a34a', display: 'inline-block', flexShrink: 0 }} />
         </div>
       </header>
 
-      {/* Filter row */}
+      {/* Filter rows */}
       <div className="border-b border-gray-200 bg-white px-6 py-3">
         <div className="mx-auto max-w-5xl space-y-2">
+
+          {/* Row 1: Time filters */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Date inputs */}
             <input
               type="date" value={dateFrom}
               onChange={(e) => { setDateFrom(e.target.value); setDatePreset(''); }}
@@ -243,8 +227,6 @@ export default function ActivityPage() {
             {(dateFrom || dateTo || datePreset) && (
               <button onClick={clearDateFilter} className="text-sm text-gray-400 hover:text-gray-700">×</button>
             )}
-
-            {/* Date presets */}
             {DATE_PRESETS.map((p) => (
               <button
                 key={p.key}
@@ -257,26 +239,54 @@ export default function ActivityPage() {
                 {p.label}
               </button>
             ))}
+          </div>
 
-            <div className="h-5 w-px bg-gray-200 mx-1" />
-
-            {/* Entity dropdowns */}
-            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={selectCls}>
-              <option value="">All teams</option>
-              {meta.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <select value={platFilter} onChange={(e) => setPlatFilter(e.target.value)} className={selectCls}>
-              <option value="">All platforms</option>
-              {availablePlatforms.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+          {/* Row 2: Context + type filters (ART → Platform → VS → Team → Type) */}
+          <div className="flex flex-wrap items-center gap-2">
             <select value={artFilter} onChange={(e) => setArtFilter(e.target.value)} className={selectCls}>
               <option value="">All ARTs</option>
               {meta.arts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
+            <div className="h-5 w-px bg-gray-200" />
+            <select value={platFilter} onChange={(e) => setPlatFilter(e.target.value)} className={selectCls}>
+              <option value="">All platforms</option>
+              {availablePlatforms.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <div className="h-5 w-px bg-gray-200" />
             <select value={vsFilter} onChange={(e) => setVsFilter(e.target.value)} className={selectCls}>
               <option value="">All value streams</option>
               {meta.initiatives.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
+            <div className="h-5 w-px bg-gray-200" />
+            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={selectCls}>
+              <option value="">All teams</option>
+              {meta.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <div className="h-5 w-px bg-gray-200" />
+            {/* Type popover */}
+            <div ref={typeRef} className="relative">
+              <button
+                onClick={() => setTypeOpen((o) => !o)}
+                className="rounded border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                {typeLabel}
+              </button>
+              {typeOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 rounded border border-gray-200 bg-white shadow-lg" style={{ minWidth: 200 }}>
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2">
+                    <button onClick={() => setHiddenCategories(new Set())} className="text-xs text-royalRed hover:underline">All</button>
+                    <span className="text-gray-300">|</span>
+                    <button onClick={() => setHiddenCategories(new Set(POPOVER_CATEGORIES))} className="text-xs text-royalRed hover:underline">None</button>
+                  </div>
+                  {POPOVER_CATEGORIES.map((cat) => (
+                    <label key={cat} className="flex cursor-pointer items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50">
+                      <input type="checkbox" checked={!hiddenCategories.has(cat)} onChange={() => toggleCategory(cat)} style={{ accentColor: CATEGORY_COLOURS[cat] }} />
+                      <span className="text-sm text-gray-700">{cat}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Result count + clear */}
