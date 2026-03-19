@@ -267,7 +267,7 @@ export default function ActivityPage() {
             <div ref={typeRef} className="relative">
               <button
                 onClick={() => setTypeOpen((o) => !o)}
-                className="rounded border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                className="rounded border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
               >
                 {typeLabel}
               </button>
@@ -303,7 +303,7 @@ export default function ActivityPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
+      <div className="mx-auto max-w-5xl pt-4 pb-6">
         <div className="relative">
           {scrolledDown && (
             <div className="pointer-events-none sticky top-4 z-10 mb-2 flex justify-center">
