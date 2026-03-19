@@ -57,10 +57,14 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   }, [runSimulationTick]);
 
   return (
-    <div className="min-h-screen grid grid-cols-[240px_1fr]">
-      {/* ── Sidebar ── */}
-      <aside className="flex min-h-screen flex-col border-r border-gray-200 bg-white p-4">
-        <div className="mb-0">
+    <div className="min-h-screen">
+      {/* ── Fixed Sidebar ── */}
+      <aside
+        className="fixed left-0 top-0 z-20 flex h-screen w-60 flex-col border-r border-gray-200 bg-white"
+        style={{ padding: '1rem' }}
+      >
+        {/* Brand area */}
+        <div className="shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/Royal_Mail_logo_2024.svg"
@@ -70,28 +74,27 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
             className="mb-2"
           />
           <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
-          <p className="mt-1 text-xs text-gray-500">
-            PI Planning orchestration
-          </p>
+          <p className="mt-1 text-xs text-gray-500">PI Planning orchestration</p>
         </div>
 
         {/* Royal Mail stripe accent */}
         <div
-          className="my-4 h-1 w-full rounded-full"
+          className="my-4 h-1 w-full shrink-0 rounded-full"
           style={{
             background:
               'linear-gradient(to right, #EE2722, #EE2722, #FDDD1C, #f97316, #fca5a5)',
           }}
         />
 
-        <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        {/* Planning nav label */}
+        <div className="mb-2 shrink-0 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
           Planning
         </div>
 
-        <nav className="space-y-1">
+        {/* Planning nav — scrollable if needed */}
+        <nav className="flex-1 overflow-y-auto space-y-1">
           {planningNavItems.map((item) => {
             const isActive = pathname === item.href;
-
             return (
               <Link
                 key={item.href}
@@ -108,11 +111,35 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto pt-6">
+        {/* Config items — always pinned to bottom */}
+        <div className="mt-auto shrink-0 pt-4">
           <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
             Configuration
           </div>
 
+          {/* Demo Mode toggle */}
+          <div className="mb-2 flex items-center justify-between rounded border border-gray-200 px-3 py-2">
+            <div>
+              <div className="text-sm text-gray-700">Demo Mode</div>
+              {demoMode && (
+                <div className="text-xs text-amber-700">Simulated data</div>
+              )}
+            </div>
+            <button
+              role="switch"
+              aria-checked={demoMode}
+              onClick={() => setDemoMode(!demoMode)}
+              className="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none"
+              style={{ backgroundColor: demoMode ? '#FDDD1C' : '#d1d5db' }}
+            >
+              <span
+                className="pointer-events-none mt-0.5 inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                style={{ transform: demoMode ? 'translateX(1.125rem)' : 'translateX(0.125rem)' }}
+              />
+            </button>
+          </div>
+
+          {/* Admin link */}
           <Link
             href="/admin"
             className={`flex items-center gap-2 rounded border px-3 py-2 text-sm ${
@@ -127,11 +154,14 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* ── Main content area ── */}
-      <div className="relative min-w-0">
+      {/* ── Main content area — offset for fixed sidebar ── */}
+      <div className="relative ml-60 min-w-0">
         {/* Demo Mode amber banner */}
         {demoMode && showPlanningHeader && (
-          <div className="px-4 py-1.5 text-center text-xs font-semibold" style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}>
+          <div
+            className="px-4 py-1.5 text-center text-xs font-semibold"
+            style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
+          >
             Demo Mode — simulated data is active
           </div>
         )}
@@ -143,13 +173,24 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
             style={{ backgroundColor: '#EE2722' }}
           >
             {/* Diagonal stripe watermark */}
-            <div className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden" style={{ width: 220, zIndex: 0 }}>
+            <div
+              className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden"
+              style={{ width: 220, zIndex: 0 }}
+            >
               <svg
                 width="220"
                 height="100%"
                 viewBox="0 0 220 80"
                 preserveAspectRatio="none"
-                style={{ transform: 'rotate(-25deg)', transformOrigin: 'center center', width: '140%', height: '200%', position: 'absolute', top: '-50%', right: '-20%' }}
+                style={{
+                  transform: 'rotate(-25deg)',
+                  transformOrigin: 'center center',
+                  width: '140%',
+                  height: '200%',
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-20%',
+                }}
               >
                 {Array.from({ length: 12 }).map((_, i) => (
                   <rect
@@ -165,7 +206,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
               </svg>
             </div>
 
-            {/* Header controls — above watermark */}
+            {/* Header controls */}
             <div className="relative flex flex-wrap items-center gap-4" style={{ zIndex: 1 }}>
               {/* ART selector buttons */}
               <div className="flex items-center gap-2">
@@ -184,28 +225,6 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                   </button>
                 ))}
               </div>
-
-              {/* Divider */}
-              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
-
-              {/* Demo Mode chip */}
-              <label className="flex items-center gap-2 text-sm">
-                {demoMode && (
-                  <span
-                    className="rounded-full px-2 py-0.5 text-xs font-semibold"
-                    style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
-                  >
-                    Demo
-                  </span>
-                )}
-                <span className="text-white">Demo Mode</span>
-                <input
-                  type="checkbox"
-                  checked={demoMode}
-                  onChange={(e) => setDemoMode(e.target.checked)}
-                  className="accent-white"
-                />
-              </label>
 
               {/* Divider */}
               <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
