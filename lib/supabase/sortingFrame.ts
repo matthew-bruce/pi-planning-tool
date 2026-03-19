@@ -53,6 +53,7 @@ type DbTeam = {
   id: string;
   name: string;
   platform_id: string | null;
+  team_type: string | null;
   is_active: boolean;
   platforms?: Array<{
     id: string;
@@ -81,7 +82,8 @@ export type SortingFrameInitiativeSummary = {
 export type SortingFrameTeamLane = {
   id: string;
   name: string;
-  platform: string;
+  platform: string | null;
+  teamType: string | null;
   features: Feature[];
 };
 
@@ -210,7 +212,7 @@ export async function getTeamsByIds(teamIds: string[]): Promise<DbTeam[]> {
 
   const { data } = await supabase
     .from('teams')
-    .select('id, name, platform_id, is_active, platforms(id, name)')
+    .select('id, name, platform_id, team_type, is_active, platforms(id, name)')
     .in('id', teamIds)
     .order('name');
 
@@ -372,13 +374,14 @@ export async function getSortingFrameData(input: {
           const team = teamById.get(teamId);
           if (!team) return null;
 
-          const platform = team.platforms?.[0]?.name ?? 'Unknown';
-          platformSet.add(platform);
+          const platform = team.platforms?.[0]?.name ?? null;
+          if (platform) platformSet.add(platform);
 
           return {
             id: team.id,
             name: team.name,
             platform,
+            teamType: team.team_type ?? null,
             features: laneFeatures,
           };
         })

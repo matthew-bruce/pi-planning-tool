@@ -65,8 +65,8 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           <img
             src="/Royal_Mail_logo_2024.svg"
             alt="Royal Mail"
-            height="28"
-            style={{ height: 28 }}
+            height="36"
+            style={{ height: 36 }}
             className="mb-2"
           />
           <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
@@ -188,21 +188,6 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
               {/* Divider */}
               <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
 
-              {/* Stage indicator pill */}
-              <span
-                className="rounded-full px-3 py-1 text-xs font-medium"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  color: '#ffffff',
-                }}
-              >
-                Planning
-              </span>
-
-              {/* Divider */}
-              <div className="h-6 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.25)' }} />
-
               {/* Demo Mode chip */}
               <label className="flex items-center gap-2 text-sm">
                 {demoMode && (
@@ -227,7 +212,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
 
               {/* Density toggle */}
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-white">Density</span>
+                <span className="text-white">Card view</span>
                 <button
                   onClick={() => setDensity('compact')}
                   className="rounded px-2 py-1 text-sm transition-colors"

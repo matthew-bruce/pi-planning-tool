@@ -19,7 +19,7 @@ export function SprintColumn({ sprint, features }: SprintColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className="min-w-64 rounded border border-gray-200 bg-gray-50 p-2"
+      className="min-w-64 rounded border border-gray-200 bg-white p-2"
     >
       <h4 className="font-semibold">{sprintLabel}</h4>
 

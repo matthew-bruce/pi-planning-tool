@@ -32,7 +32,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'platforms', label: 'Platforms' },
   { key: 'arts', label: 'ARTs' },
   { key: 'teams', label: 'Teams' },
-  { key: 'initiatives', label: 'Initiatives' },
+  { key: 'initiatives', label: 'Value Streams' },
   { key: 'imports', label: 'Import / Sync' },
 ];
 
@@ -237,7 +237,10 @@ export function AdminControlCentre(props: {
 
   return (
     <div className="space-y-4">
-      <div className="rounded border border-gray-200 bg-white p-4">
+      <div
+        className="rounded border p-4"
+        style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', borderBottomWidth: 1 }}
+      >
         <h2 className="text-2xl font-bold text-gray-900">Dispatch Admin Control Centre</h2>
         <p className="text-sm text-gray-600 mt-1">Configure Program Increments, teams, initiatives and import planning data</p>
       </div>
@@ -695,7 +698,7 @@ export function AdminControlCentre(props: {
             {props.arts.map((art) => (
               <tr key={art.id} className="border-t">
                 <td className="p-2"><input className="border rounded px-2 py-1 w-full" defaultValue={art.name} onBlur={(e) => submit(() => updateArtAction(art.id, { name: e.target.value }), 'ART updated')} /></td>
-                <td className="p-2"><button className="text-xs rounded bg-gray-700 text-white px-2 py-1" onClick={() => submit(() => updateArtAction(art.id, { is_active: !art.is_active }), 'ART status updated')}>{art.is_active ? 'Active' : 'Inactive'}</button></td>
+                <td className="p-2"><button className={`text-xs rounded px-2 py-1 ${art.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`} onClick={() => submit(() => updateArtAction(art.id, { is_active: !art.is_active }), 'ART status updated')}>{art.is_active ? 'Active' : 'Inactive'}</button></td>
               </tr>
             ))}
           </tbody></table>

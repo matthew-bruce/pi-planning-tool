@@ -31,6 +31,9 @@ export default function TeamPlanningPage() {
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="space-y-4">
+        <div className="mb-2">
+          <h1 className="text-2xl font-semibold text-gray-900">Team Planning Room</h1>
+        </div>
         {groupedByPlatform.map(([platform, platformTeams]) => {
           const activeTeams = platformTeams.filter((t) => scopedFeatures.some((f) => f.teamId === t.id));
           if (!activeTeams.length) return null;
