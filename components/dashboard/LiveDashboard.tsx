@@ -5,6 +5,70 @@ import type { DashboardData } from '@/lib/types/dashboard';
 
 type Props = { initialData: DashboardData };
 
+// ── KPI colour helpers ──────────────────────────────────────────────────────
+
+type KpiColour = {
+  border: string;   // left border colour
+  value: string;    // value text colour
+};
+
+const GREEN:  KpiColour = { border: '#16a34a', value: '#15803d' };
+const AMBER:  KpiColour = { border: '#d97706', value: '#b45309' };
+const RED:    KpiColour = { border: '#dc2626', value: '#b91c1c' };
+const NEUTRAL: KpiColour = { border: '#e5e7eb', value: '#111827' };
+
+function convergenceColour(pct: number): KpiColour {
+  if (pct >= 80) return GREEN;
+  if (pct >= 50) return AMBER;
+  return RED;
+}
+
+function getKpiColour(label: string, value: number, extra: {
+  convergencePct?: number;
+  participatingTeams?: number;
+  cycleIsActive?: boolean;
+  teamsWithFreshData?: number;
+}): KpiColour {
+  switch (label) {
+    case 'Total Features':
+      return GREEN;
+
+    case 'Convergence %':
+      return convergenceColour(extra.convergencePct ?? value);
+
+    case 'High Criticality Dependencies':
+      return value > 0 ? RED : GREEN;
+
+    case 'Teams with Fresh Data': {
+      const total = extra.participatingTeams ?? 0;
+      if (value === 0 && extra.cycleIsActive) return RED;
+      if (total > 0 && value >= total) return GREEN;
+      if (value > 0) return AMBER;
+      return RED;
+    }
+
+    case 'Total Dependencies':
+      return NEUTRAL;
+
+    case 'Imports Today':
+      return value > 0 ? NEUTRAL : AMBER;
+
+    default:
+      return NEUTRAL;
+  }
+}
+
+function convergenceBadge(pct: number, featureCount: number) {
+  if (featureCount === 0) {
+    return { label: 'No data', cls: 'bg-gray-100 text-gray-500' };
+  }
+  if (pct >= 75) return { label: `${pct}%`, cls: 'bg-green-100 text-green-700' };
+  if (pct >= 50) return { label: `${pct}%`, cls: 'bg-amber-100 text-amber-700' };
+  return              { label: `${pct}%`, cls: 'bg-red-100 text-red-700' };
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
+
 export function LiveDashboard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [selectedArtId, setSelectedArtId] = useState(
@@ -44,6 +108,13 @@ export function LiveDashboard({ initialData }: Props) {
     [data.sprintDistribution]
   );
 
+  // Derived convergence % for KPI colouring
+  const totalForConvergence =
+    data.convergence.draft + data.convergence.planned + data.convergence.committed;
+  const convergencePct = totalForConvergence > 0
+    ? Math.round((data.convergence.committed / totalForConvergence) * 100)
+    : 0;
+
   if (!data.cycle) {
     return (
       <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-6 text-sm text-gray-700">
@@ -52,6 +123,17 @@ export function LiveDashboard({ initialData }: Props) {
       </div>
     );
   }
+
+  const cycleIsActive = data.cycle.is_active;
+
+  const kpiItems: Array<{ label: string; value: number }> = [
+    { label: 'Total Features',                  value: data.summary.totalFeatures },
+    { label: 'Convergence %',                   value: convergencePct },
+    { label: 'High Criticality Dependencies',   value: data.summary.highCriticalityDependencies },
+    { label: 'Teams with Fresh Data',           value: data.summary.teamsWithFreshData },
+    { label: 'Total Dependencies',              value: data.summary.totalDependencies },
+    { label: 'Imports Today',                   value: data.summary.importsToday },
+  ];
 
   return (
     <div className="space-y-5">
@@ -103,19 +185,40 @@ export function LiveDashboard({ initialData }: Props) {
         </div>
       </section>
 
+      {/* KPI cards with coloured left borders */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {kpiItems.map(({ label, value }) => {
+          const colour = getKpiColour(label, value, {
+            convergencePct,
+            participatingTeams: data.summary.participatingTeams,
+            cycleIsActive,
+            teamsWithFreshData: data.summary.teamsWithFreshData,
+          });
+
+          return (
+            <article
+              key={label}
+              className="rounded-lg border border-gray-200 bg-white p-4"
+              style={{ borderLeft: `3px solid ${colour.border}` }}
+            >
+              <p className="text-xs uppercase text-gray-500">{label}</p>
+              <p
+                className="mt-2 text-3xl font-bold"
+                style={{ color: colour.value }}
+              >
+                {label === 'Convergence %' ? `${value}%` : value}
+              </p>
+            </article>
+          );
+        })}
+      </section>
+
+      {/* Secondary KPI cards — neutral */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Total Features', data.summary.totalFeatures],
-          ['Total Stories', data.summary.totalStories],
-          ['Participating Teams', data.summary.participatingTeams],
-          ['Active Initiatives', data.summary.activeInitiatives],
-          ['Total Dependencies', data.summary.totalDependencies],
-          [
-            'High Criticality Dependencies',
-            data.summary.highCriticalityDependencies,
-          ],
-          ['Imports Today', data.summary.importsToday],
-          ['Teams with Fresh Data', data.summary.teamsWithFreshData],
+          ['Total Stories',        data.summary.totalStories],
+          ['Participating Teams',  data.summary.participatingTeams],
+          ['Active Initiatives',   data.summary.activeInitiatives],
         ].map(([label, value]) => (
           <article
             key={String(label)}
@@ -127,31 +230,36 @@ export function LiveDashboard({ initialData }: Props) {
         ))}
       </section>
 
+      {/* ART Status tiles — with convergence badge */}
       <section className="rounded-lg border border-gray-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">ART Status</h2>
         <div className="grid gap-3 lg:grid-cols-2">
-          {data.artTiles.map((tile) => (
-            <article
-              key={tile.artId}
-              className="rounded border border-gray-200 bg-gray-50 p-3"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{tile.artName}</h3>
-                <span className="rounded bg-red-100 px-2 py-0.5 text-xs text-royalRed">
-                  Convergence {tile.convergencePct}%
-                </span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-gray-700">
-                <p>Initiatives: {tile.initiatives}</p>
-                <p>Teams: {tile.teamsContributing}</p>
-                <p>Features: {tile.features}</p>
-                <p>Dependencies: {tile.dependencies}</p>
-                <p className="col-span-2 text-royalRed">
-                  High risk deps: {tile.unresolvedHighDependencies}
-                </p>
-              </div>
-            </article>
-          ))}
+          {data.artTiles.map((tile) => {
+            const badge = convergenceBadge(tile.convergencePct, tile.features);
+
+            return (
+              <article
+                key={tile.artId}
+                className="rounded border border-gray-200 bg-gray-50 p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold">{tile.artName}</h3>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
+                    Convergence {badge.label}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                  <p>Initiatives: {tile.initiatives}</p>
+                  <p>Teams: {tile.teamsContributing}</p>
+                  <p>Features: {tile.features}</p>
+                  <p>Dependencies: {tile.dependencies}</p>
+                  <p className="col-span-2 text-red-700">
+                    High risk deps: {tile.unresolvedHighDependencies}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
           {!data.artTiles.length && (
             <p className="text-sm text-gray-500">
               No ART data found for this Program Increment.

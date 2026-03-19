@@ -46,6 +46,7 @@ type DbFeature = {
   source_url: string | null;
   commitment_status: string | null;
   status: string | null;
+  source_system: string | null;
 };
 
 type DbTeam = {
@@ -193,7 +194,7 @@ export async function getFeaturesForSortingFrame(
   const { data } = await supabase
     .from('features')
     .select(
-      'id, planning_cycle_id, initiative_id, team_id, sprint_id, ticket_key, title, source_url, commitment_status, status, initiatives!inner(art_id)'
+      'id, planning_cycle_id, initiative_id, team_id, sprint_id, ticket_key, title, source_url, commitment_status, status, source_system, initiatives!inner(art_id)'
     )
     .eq('planning_cycle_id', cycleId)
     .eq('initiatives.art_id', artId)
@@ -330,6 +331,7 @@ export async function getSortingFrameData(input: {
     sourceUrl: feature.source_url,
     commitmentStatus: feature.commitment_status,
     status: feature.status,
+    sourceSystem: feature.source_system,
     storyCount: storyCounts.get(feature.id) ?? 0,
     dependencyCounts: dependencyCounts.get(feature.id) ?? {
       requires: 0,
