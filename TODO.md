@@ -23,6 +23,15 @@ Active work — tackle these before anything else.
 
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
+  - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text
+  - `DispatchShell.tsx` and any nav labels referencing cycles
+  - `data/helpContent.ts` — all Help Centre references
+  - Also rename the "PI Cycle 2026" data row in Supabase `planning_cycles` table to something sensible (e.g. delete it or rename to `FY26 Q1 (duplicate)`)
+- [x] Load gold demo dataset — 62 features, 211 stories, 27 dependencies, 18 value streams, 29 teams in Demo PI
+- [x] ART switching bug — clicking ART buttons on Sorting Frame does nothing (`SortingFrameBoard.tsx`)
+- [x] Permanent "Loading…" bug — spinner never clears on Sorting Frame cycle header
+- [x] Admin header — planning header hidden on `/admin` and `/help`
+- [x] Bulk Triage — "⚠ Not yet connected to live data" banner added
 - [x] Load gold demo dataset — 62 features, 211 stories, 27 dependencies, 18 value streams, 29 teams in Demo PI
 - [x] ART switching bug fixed — removed selectedArtId from first useEffect deps in SortingFrameBoard
 - [x] Permanent "Loading…" bug fixed — setLoading(false) added to early-return guard branch
@@ -36,6 +45,10 @@ Active work — tackle these before anything else.
 - [x] 8 parking lot features added to Demo PI
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 - [ ] UI batch 2 fixes — in progress via Claude Code
+- [x] UI label fixes — Program Increment throughout all UI
+- [x] Design system phase 1 — RMG branding, VS colours, dashboard colour coding, Activity Feed panel and standalone page
+- [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
+- [ ] UI batch 2 fixes — see UI & Design Improvements section below (prompts ready)
 
 ---
 
@@ -342,3 +355,101 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Activity Feed | ⬜ Not yet | New feature — needs article |
 | Value Streams | ⬜ Not yet | Renamed from Initiatives |
 | FAQ | ✅ Done | |
+## 🎨 UI & Design Improvements (post-data milestone)
+
+These were identified after the first successful load of the gold demo dataset.
+
+- [ ] **Design system — extend Tailwind tokens**
+  - Update `royalRed` from `#CC0000` to `#EE2722` (official RMG brand red)
+  - Add `royalYellow: '#FDDD1C'` (official RMG brand yellow — for warnings, Demo Mode banner)
+  - Add semantic status tokens: `success`, `warning`, `danger`, `neutral`
+  - Add surface tokens: `surface`, `surfaceSubtle`, `border`, `textPrimary`, `textMuted`
+  - Add Value Stream accent palette: `vs1` through `vs8` (light pastel tints for board section backgrounds)
+  - All changes in `tailwind.config.ts` only — no arbitrary hex values anywhere
+
+- [ ] **Dashboard — contextual colour coding**
+  - KPI cards: colour-code values against thresholds (green/amber/red)
+  - High criticality dependencies: always red regardless of count
+  - Teams with fresh data: red when 0 during an active event
+  - ART convergence tiles: colour by convergence % (0-50% red, 50-75% amber, 75%+ green)
+  - Sprint distribution bars: colour by load (under/balanced/overloaded)
+  - Convergence gauge: show stage-appropriate target marker
+
+- [ ] **Sorting Frame — Value Stream visual differentiation**
+  - Each Value Stream section gets a tinted background from the `vs1`–`vs8` palette
+  - Assigned consistently (same VS always gets same colour within a session)
+  - Colour is subtle — tints the section header and background, doesn't overpower cards
+  - Team swimlane headers more visually prominent
+
+- [ ] **Feature cards — status pills and dependency badges**
+  - Commitment status pills: Draft (gray), Planned (blue), Committed (green)
+  - Dependency badges: colour by criticality — High (red), Medium (amber), Low (green)
+  - Story count icon — clarify what it means visually
+  - Icon key — accessible via a persistent (?) or (i) button near the board
+
+- [ ] **Global Activity Feed panel**
+  - Collapsible right-side panel accessible from ALL planning pages (not Admin/Help)
+  - Collapsed state: thin tab on right edge with live notification dot for new events
+  - Expanded state: slides in 320px from right, overlays content without reflowing layout
+  - Open/closed state persisted in localStorage per session
+  - Event type colour coding via left border:
+    - Feature activity — blue `#3b82f6`
+    - Dependency events — amber `#d97706`
+    - Import activity — purple `#7c3aed`
+    - Risks & attention — red `#dc2626`
+    - Planning progress — green `#16a34a`
+    - System — gray `#6b7280`
+  - **Navigation — no scrollbar:**
+    - Feed loads with most recent events at top
+    - "↑ Back to latest" pill button appears when scrolled down
+    - "N new events ↑" badge when new events arrive while scrolled down
+    - Smooth scroll animation — no visible scrollbar (scrollbar-hide)
+  - Filter chips at top of panel matching event taxonomy
+  - "Open full screen →" link at bottom
+
+- [ ] **Standalone Activity Feed page (`/activity`)**
+  - Full-screen layout — feed takes full width, larger text, more breathing room
+  - Designed to be projected on a wall or second monitor during PI Planning
+  - Auto-refreshes in real time — no manual refresh
+  - Same filter chips as panel version
+  - Link from Activity Feed panel: "Open full screen →"
+  - Accessible without login during PoC phase
+
+---
+
+## 📱 Mobile & PWA Sprint (dedicated future sprint)
+
+> Do not start this until the app is working well on large screens.
+> This is a dedicated sprint — not individual tickets mixed with other work.
+
+**Philosophy: adaptive design, not responsive squishing.**
+The Sorting Frame cannot be made to work on mobile by scaling — it needs 
+a completely different view. Design for mobile contexts, not against them.
+
+### PWA Foundation (low effort, high value — do first)
+- [ ] Add `next-pwa` package — makes app installable on iOS/Android home screen
+- [ ] Add web manifest (`public/manifest.json`) with RMG branding
+- [ ] Configure service worker for shell caching
+- [ ] Test installation on iOS Safari and Android Chrome
+
+### Mobile-specific views
+
+| Surface | Mobile treatment |
+|---|---|
+| **Dashboard** | Stacked KPI cards, scrollable — already close to working |
+| **Activity Feed** | Full screen — best mobile surface, killer use case |
+| **Sorting Frame** | Read-only drill-down: VS list → tap VS → team list → tap team → feature list. No board on mobile. |
+| **Dependencies** | List view with dependency cards instead of reactflow graph |
+| **Team Planning** | Single sprint view with left/right swipe between sprints |
+| **Admin** | Desktop only — show "best experienced on desktop" notice |
+
+### Navigation
+- Collapsed sidebar automatic on mobile (<768px)
+- Bottom tab bar on mobile for primary nav items (Sorting Frame, Dashboard, Activity, Dependencies)
+- Consistent with native mobile app patterns
+
+### Future consideration — native app
+- Next.js + PWA is the right stack — no rewrite needed
+- PWA gives: home screen install, push notifications, offline shell
+- True native (React Native) only if PWA proves insufficient
+- Evaluate after PWA sprint based on user feedback

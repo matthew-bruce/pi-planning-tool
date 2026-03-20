@@ -81,6 +81,7 @@ Platform (independent grouping of teams — no ART affiliation)
 app/
   admin/              – Admin page + all server actions
   api/                – API routes (dashboard, sorting-frame, activity)
+  api/                – API routes (dashboard, sorting-frame)
   dashboard/          – Dashboard page (server component)
   sorting-frame/      – Sorting Frame page (server component)
   team-planning/      – Team Planning (client-only, Zustand — P1 gap)
@@ -108,6 +109,7 @@ lib/
     bootstrap.ts      – Parallel data fetch for admin page
     imports.ts        – Snapshot import, rebuild, rollback
     initiatives.ts    – ⚠️ To be renamed valueStreams.ts in Phase 2
+    value streams.ts
     planningCycles.ts – ⚠️ To be renamed programIncrements.ts in Phase 2
     platforms.ts
     readiness.ts      – Cycle readiness summaries
@@ -119,6 +121,7 @@ lib/
     dashboard.ts      – Dashboard data queries
     server.ts         – Supabase client factory (throws if env vars missing)
     sortingFrame.ts   – Sorting Frame data queries (includes stories)
+    sortingFrame.ts   – Sorting Frame data queries
   types/
     dashboard.ts      – DashboardData type (canonical source of truth)
   planning/
@@ -146,7 +149,7 @@ data/
 Dispatch currently has two data layers that coexist:
 
 ### 1. Supabase Layer (Production data)
-Used by: Dashboard, Sorting Frame, Admin, Activity Feed
+Used by: Dashboard, Sorting Frame, Admin
 
 ```
 Page (Server Component)
@@ -186,6 +189,11 @@ DispatchShell (mounts on all pages)
 | `team_pi_participation` | Which teams participate in which Program Increments — ⚠️ currently named `team_cycle_participation`, Phase 2 rename pending |
 | `team_art_assignments` | Which ART(s) a team is operating under within a specific PI. |
 | `initiatives` | Value Streams — epics/workstreams linked to ART + PI. ⚠️ To be renamed `value_streams` in Phase 2. |
+| `arts` | Agile Release Trains. Stores `name` (full) and `short_name` (abbreviation e.g. WAA, OOH, CRM). |
+| `teams` | Delivery teams. Belong to one platform (fixed). Have a `team_type` (stream-aligned / platform / enabling / complicated-subsystem). No fixed ART. |
+| `team_pi_participation` | Which teams participate in which Program Increments — ⚠️ currently named `team_cycle_participation`, Phase 2 rename pending |
+| `team_art_assignments` | Which ART(s) a team is operating under within a specific PI. Separate from participation — a team can be in multiple ARTs per PI. |
+| `initiatives` | Epics/workstreams linked to ART + PI |
 | `app_settings` | Global app configuration (demo cycle visibility, sync mode, etc.) |
 
 ### Live Planning Tables
@@ -195,6 +203,16 @@ DispatchShell (mounts on all pages)
 | `features` | Live feature records for the active PI. Includes source_system, last_synced_at, sprint_id (null = parking lot). |
 | `stories` | Live story records. `feature_id` now populated — stories linked to parent features. |
 | `dependencies` | Live dependency records |
+
+| `features` | Live feature records for the active PI |
+| `stories` | Live story records |
+| `dependencies` | Live dependency records |
+
+> **Planned additions to `features` and `stories`** (Phase 1 schema migration):
+> - `source_key` — internal system ID from ADO/Jira (stable, never changes unlike ticket_key)
+> - `workflow_status` — renamed from ambiguous `status` field (Phase 2)
+>
+> **Merge strategy fields already present:** `source_system`, `last_synced_at`, `updated_at`
 
 ### Import / Snapshot Tables
 
@@ -206,12 +224,33 @@ DispatchShell (mounts on all pages)
 | `snapshot_dependencies` | Raw imported dependency rows |
 | `activity_events` | Event log per PI (powers Live Tracking Dashboard feed) |
 
+### Key Relationships
+
+```
+program_increments → sprints (1:many)
+program_increments → initiatives (1:many)
+program_increments → team_pi_participation (1:many)
+program_increments → team_art_assignments (1:many)
+arts → initiatives (1:many)
+arts → team_art_assignments (1:many)
+platforms → teams (1:many)
+teams → team_pi_participation (1:many)
+teams → team_art_assignments (1:many)
+initiatives → features (1:many, via import)
+teams → features (1:many, via import)
+sprints → features (1:many, nullable — null = parking lot)
+features → stories (1:many)
+features → dependencies (source and target, many:many via ticket_key currently)
+import_snapshots → snapshot_features / snapshot_stories / snapshot_dependencies
+```
+
 ### PI Naming Conventions
 
 | Prefix | Purpose | Visible to regular users? |
 |---|---|---|
 | None (e.g. `FY26 Q1`) | Real Program Increments | Yes |
 | `DEMO —` (e.g. `Demo PI`) | Demo Mode showcase data | Admin toggle only |
+| `DEMO —` (e.g. `DEMO — Gold Dataset`) | Demo Mode showcase data | Admin toggle only |
 | `TEST —` (e.g. `TEST — Import Trial`) | Development/testing | Admin toggle only |
 
 ---
@@ -233,11 +272,15 @@ CSV uploaded → parsed client-side
                     → clears live tables for PI
                     → rebuilds from all status='imported' snapshots
                     → propagates errors — no silent failures
+                    → clears live tables for PI
+                    → rebuilds from all status='imported' snapshots
 ```
 
 **Rollback:**
 1. Mark latest `import_snapshots.status = 'rolled_back'`
 2. Trigger rebuild from remaining active snapshots
+
+> **⚠️ Known limitation:** Rebuild is destructive (delete + reinsert). Will be replaced with deterministic upsert strategy in Phase 2. See TODO.
 
 ### Data Source Authority Rules
 
@@ -305,6 +348,53 @@ When creating a new Program Increment, Dispatch:
 5. Auto-generates sprint records with correct date ranges
 6. Shows a **preview table** with editable sprint names for user confirmation
 7. Carry-forward: copies participating teams and ARTs from previous PI (P2 TODO)
+No `manually_edited` flag — BAU tooling is always the authority. These rules are documented in Help Centre and shown in-situ from the Import UI.
+
+---
+
+## Program Increment Management
+
+When creating a new Program Increment, Dispatch:
+1. Takes: PI name, start date, sprint count, sprint length (default 14 days)
+2. Derives next sprint number from the highest existing sprint across all PIs
+3. Auto-generates sprint records with correct date ranges
+4. Shows a **preview table** for user confirmation before saving
+5. Allows manual date editing in the preview
+6. **Carry-forward:** copies participating teams and ARTs from the previous PI as defaults
+7. Facilitator reviews and adjusts carried-forward teams/ARTs before confirming
+
+Features, Stories, Dependencies and Import Snapshots are **never** carried forward.
+
+---
+
+## Demo Mode Architecture
+
+```
+User toggles Demo Mode ON
+  → Zustand loads DEMO — PI data from Supabase as baseline (read-only)
+    → Simulation ticks begin (Zustand in-memory only)
+      → Simulated events: feature commits, dependency flags, sprint load shifts
+        → Activity feed, Dashboard KPIs, Sorting Frame all update in real time
+          → Nothing writes back to Supabase
+
+User toggles Demo Mode OFF
+  → Zustand reverts to real active PI
+  → Amber banner disappears
+```
+
+---
+
+## Planning Stage Architecture
+
+The current stage is stored on `program_increments.current_stage` (integer 1–6). Set by facilitator via header control. Read by all clients. No workflow implications — purely a contextual lens.
+
+**Stages:**
+1. Business Context & Vision
+2. Team Breakouts — Draft Plan
+3. Draft Plan Review
+4. Team Breakouts — Revised Plan
+5. Final Plan Review & RoART
+6. PI Planning Complete
 
 ---
 
@@ -357,6 +447,34 @@ providers/jiraProvider.ts    – Jira
 
 ---
 
+## Design Tokens
+
+```ts
+colors: { royalRed: '#CC0000' }
+```
+
+Never use arbitrary hex values. Always extend `tailwind.config.ts`.
+
+---
+
+## Canonical Domain Types
+
+```ts
+ART         { id, name, shortName }
+Platform    { id, name }                          // No ART affiliation
+Team        { id, name, platformId, teamType }    // No fixed ART
+Value Stream  { id, artId, programIncrementId, name }
+Sprint      { id, number, name, startDate, endDate }
+Feature     { id, ticketKey, sourceKey, title, value streamId, teamId, sprintId,
+              storyCount, dependencyCounts, commitmentStatus, workflowStatus,
+              sourceUrl, sourceSystem, lastSyncedAt }
+Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
+              sourceTicketKey, targetTicketKey,        // raw import keys
+              type, owner, criticality, targetSprintName, description }
+```
+
+---
+
 ## Phase 2 Rename Tasks (do not mix with Phase 1 additive changes)
 
 | Current name | Rename to | Scope |
@@ -386,8 +504,7 @@ providers/jiraProvider.ts    – Jira
 > 5. Flag Help Centre updates in Help Backlog table in `TODO.md`
 > 6. Continuously scan for documentation gaps — if it matters, it goes in a file
 > 7. Never let product decisions live only in conversation history
-> 8. Call out incorrect SAFe terminology immediately — correct term is **Program Increment**
-> 9. Call out "Initiative" — correct term is **Value Stream**
+> 8. Call out incorrect SAFe terminology immediately — the correct term is **Program Increment**
 
 ---
 
@@ -398,6 +515,8 @@ providers/jiraProvider.ts    – Jira
 | Team Planning not Supabase-connected | 🔴 P1 | `app/team-planning/` |
 | Dependencies page not Supabase-connected | 🔴 P1 | `app/dependencies/` |
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
+| ART switching bug on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
+| Permanent "Loading…" on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
 | `planning_cycles` table needs renaming to `program_increments` | 🟠 P2 | DB + all TypeScript |
 | `planning_cycle_id` columns need renaming to `program_increment_id` | 🟠 P2 | DB + all TypeScript |
 | `status` column ambiguous — needs renaming to `workflow_status` | 🟠 P2 | `features`, `stories` |
@@ -406,5 +525,7 @@ providers/jiraProvider.ts    – Jira
 | `getActiveOrSelectedPlanningCycle` duplicated | 🟠 P2 | `lib/supabase/dashboard.ts` + `sortingFrame.ts` |
 | Snapshot rebuild is destructive (no deterministic merge) | 🟠 P2 | `lib/admin/imports.ts` |
 | Demo Mode simulation not fully implemented | 🟠 P2 | `store/useDispatchStore.ts` |
+| `getActiveOrSelectedPlanningCycle` duplicated | 🟠 P2 | `lib/supabase/dashboard.ts` + `sortingFrame.ts` |
+| Snapshot rebuild is destructive (no merge strategy) | 🟠 P2 | `lib/admin/imports.ts` |
 | Supabase null guards are dead code | 🟡 P3 | `lib/admin/*.ts` |
 | Two `Art` types (models.ts vs admin/types.ts) | 🟡 P3 | `lib/models.ts` |
