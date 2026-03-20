@@ -27,6 +27,15 @@ export type DependencyCounts = {
   conflict: number;
 };
 
+export type FeatureStory = {
+  id: string;
+  ticketKey: string;
+  title: string;
+  sprintId: string | null;
+  sprintNumber: number | null;
+  status: string | null;
+};
+
 export type Feature = {
   id: string;
   ticketKey: string;
@@ -35,12 +44,14 @@ export type Feature = {
   initiativeId: string;
   teamId: string;
   sprintId: string | null;
+  sprintNumber?: number | null;
   sourceUrl?: string | null;
   commitmentStatus?: string | null;
   status?: string | null;
   sourceSystem?: string | null;
   storyCount: number;
   dependencyCounts: DependencyCounts;
+  stories?: FeatureStory[];
 };
 
 export type DependencyType = 'requires' | 'blocks' | 'conflict';

@@ -4,15 +4,19 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Feature, Sprint } from '@/lib/models';
 import { formatSprintRange } from '@/lib/utils';
+import { Inbox } from 'lucide-react';
 import { FeatureCard } from '@/components/FeatureCard';
 
 type SprintColumnProps = {
   sprint: Sprint;
   features: Feature[];
   searchTerm?: string;
+  showHeader?: boolean;
+  /** Override the root element's className. Defaults to a standalone card style. */
+  className?: string;
 };
 
-export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps) {
+export function SprintColumn({ sprint, features, searchTerm, showHeader = true, className }: SprintColumnProps) {
   const { setNodeRef } = useDroppable({ id: sprint.id });
 
   const sprintLabel = sprint.name ?? `Sprint ${sprint.number}`;
@@ -20,13 +24,16 @@ export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps
   return (
     <div
       ref={setNodeRef}
-      className="min-w-64 rounded border border-gray-200 bg-white p-2"
+      className={className ?? 'w-64 shrink-0 rounded border border-gray-200 bg-white p-2'}
     >
-      <h4 className="font-semibold">{sprintLabel}</h4>
-
-      <p className="mb-2 text-xs text-gray-500">
-        {formatSprintRange(sprint.startDate, sprint.endDate)}
-      </p>
+      {showHeader && (
+        <>
+          <h4 className="font-semibold">{sprintLabel}</h4>
+          <p className="mb-2 text-xs text-gray-500">
+            {formatSprintRange(sprint.startDate, sprint.endDate)}
+          </p>
+        </>
+      )}
 
       <SortableContext
         items={features.map((feature) => feature.id)}
@@ -36,6 +43,14 @@ export function SprintColumn({ sprint, features, searchTerm }: SprintColumnProps
           <FeatureCard key={feature.id} feature={feature} searchTerm={searchTerm} />
         ))}
       </SortableContext>
+
+      {/* Ghost placeholder — structural indicator, barely-there */}
+      {!showHeader && features.length === 0 && (
+        <div className="pointer-events-none flex min-h-[56px] select-none flex-col items-center justify-center gap-1">
+          <Inbox size={20} className="text-gray-200" />
+          <span className="text-gray-300" style={{ fontSize: 11 }}>Empty</span>
+        </div>
+      )}
     </div>
   );
 }

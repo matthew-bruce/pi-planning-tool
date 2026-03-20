@@ -33,6 +33,7 @@ See `DEVELOPER_SETUP.md`. Developer has VS Code, Git Bash, npm, Git and Claude C
 | **PI** | Acceptable abbreviation for Program Increment in tight UI spaces |
 | **PI Planning** | The two-day planning event |
 | **ART** | Agile Release Train |
+| **Value Stream** | A grouping of related Features within an ART for a PI. Previously called "Initiative". DB table remains `initiatives` until Phase 2 rename. |
 | **Stream-aligned team** | The most common SAFe team type — aligned to a flow of business domain work |
 
 ---
@@ -79,12 +80,14 @@ Platform (independent grouping of teams — no ART affiliation)
 ```
 app/
   admin/              – Admin page + all server actions
+  api/                – API routes (dashboard, sorting-frame, activity)
   api/                – API routes (dashboard, sorting-frame)
   dashboard/          – Dashboard page (server component)
   sorting-frame/      – Sorting Frame page (server component)
   team-planning/      – Team Planning (client-only, Zustand — P1 gap)
   dependencies/       – Dependencies (client-only, Zustand — P1 gap)
   triage/             – Bulk triage (client-only, Zustand — P1 gap)
+  activity/           – Standalone Activity Feed page
   help/               – Static help page
   globals.css
   layout.tsx
@@ -94,6 +97,7 @@ components/
   dashboard/          – LiveDashboard (Supabase-connected)
   sorting-frame/      – SortingFrameBoard (Supabase-connected)
   help/               – HelpLayout, HelpSidebar, HelpArticle, HelpAccordion
+  ActivityFeedPanel.tsx – Collapsible right-side activity feed panel
   DispatchShell.tsx   – Root layout shell (nav, sidebar, demo mode)
   FeatureCard.tsx     – Draggable feature card (visual-only drag in MVP1)
   SprintColumn.tsx    – Droppable sprint column
@@ -104,6 +108,7 @@ lib/
     arts.ts
     bootstrap.ts      – Parallel data fetch for admin page
     imports.ts        – Snapshot import, rebuild, rollback
+    initiatives.ts    – ⚠️ To be renamed valueStreams.ts in Phase 2
     value streams.ts
     planningCycles.ts – ⚠️ To be renamed programIncrements.ts in Phase 2
     platforms.ts
@@ -115,6 +120,7 @@ lib/
   supabase/
     dashboard.ts      – Dashboard data queries
     server.ts         – Supabase client factory (throws if env vars missing)
+    sortingFrame.ts   – Sorting Frame data queries (includes stories)
     sortingFrame.ts   – Sorting Frame data queries
   types/
     dashboard.ts      – DashboardData type (canonical source of truth)
@@ -178,6 +184,11 @@ DispatchShell (mounts on all pages)
 | `program_increments` | PI definitions (name, dates, sprint count, sprint length, active flag, current stage) — ⚠️ currently named `planning_cycles`, Phase 2 rename pending |
 | `sprints` | Sprint schedule per PI. Sprint numbering is **continuous across PIs** (PI1 = Sprint 1–6, PI2 = Sprint 7–13, etc.) |
 | `platforms` | Platform groupings (WEB, APP, EPS, PDA, BIG, ETP). No ART affiliation — platforms are independent. |
+| `arts` | Agile Release Trains. Stores `name` (full), `short_name` (e.g. WAA, OOH, CRM) and `display_order` for custom ordering in header. |
+| `teams` | Delivery teams. Belong to one platform (fixed). Have a `team_type`. No fixed ART. |
+| `team_pi_participation` | Which teams participate in which Program Increments — ⚠️ currently named `team_cycle_participation`, Phase 2 rename pending |
+| `team_art_assignments` | Which ART(s) a team is operating under within a specific PI. |
+| `initiatives` | Value Streams — epics/workstreams linked to ART + PI. ⚠️ To be renamed `value_streams` in Phase 2. |
 | `arts` | Agile Release Trains. Stores `name` (full) and `short_name` (abbreviation e.g. WAA, OOH, CRM). |
 | `teams` | Delivery teams. Belong to one platform (fixed). Have a `team_type` (stream-aligned / platform / enabling / complicated-subsystem). No fixed ART. |
 | `team_pi_participation` | Which teams participate in which Program Increments — ⚠️ currently named `team_cycle_participation`, Phase 2 rename pending |
@@ -189,6 +200,10 @@ DispatchShell (mounts on all pages)
 
 | Table | Purpose |
 |---|---|
+| `features` | Live feature records for the active PI. Includes source_system, last_synced_at, sprint_id (null = parking lot). |
+| `stories` | Live story records. `feature_id` now populated — stories linked to parent features. |
+| `dependencies` | Live dependency records |
+
 | `features` | Live feature records for the active PI |
 | `stories` | Live story records |
 | `dependencies` | Live dependency records |
@@ -234,6 +249,7 @@ import_snapshots → snapshot_features / snapshot_stories / snapshot_dependencie
 | Prefix | Purpose | Visible to regular users? |
 |---|---|---|
 | None (e.g. `FY26 Q1`) | Real Program Increments | Yes |
+| `DEMO —` (e.g. `Demo PI`) | Demo Mode showcase data | Admin toggle only |
 | `DEMO —` (e.g. `DEMO — Gold Dataset`) | Demo Mode showcase data | Admin toggle only |
 | `TEST —` (e.g. `TEST — Import Trial`) | Development/testing | Admin toggle only |
 
@@ -249,6 +265,13 @@ CSV uploaded → parsed client-side
         → import_snapshots row created
             → raw rows stored in snapshot_features / snapshot_stories / snapshot_dependencies
                 → rebuildLiveTablesFromSnapshots()
+                    → deduplicates features by feature_key (first occurrence wins)
+                    → deduplicates stories by story_key
+                    → auto-creates missing value streams from initiative_name
+                    → auto-creates missing teams and adds to team_pi_participation
+                    → clears live tables for PI
+                    → rebuilds from all status='imported' snapshots
+                    → propagates errors — no silent failures
                     → clears live tables for PI
                     → rebuilds from all status='imported' snapshots
 ```
@@ -270,6 +293,61 @@ BAU tooling (ADO/Jira) is always the source of truth. Timestamp wins:
 | Row exists, incoming data is older | Leave it alone |
 | Local visual change (drag-and-drop, MVP1 read-only) | Ephemeral — overridden by any sync or import |
 
+---
+
+## Demo Dataset (Gold)
+
+Loaded in Supabase against Demo PI (`cc4d9336-8c6d-448a-80ed-9a4474e2a8a0`):
+- 62 features (+ 8 in parking lot)
+- 211 stories — all linked to parent features via `feature_id`
+- 27 dependencies
+- 18 value streams across WAA and OOH ARTs
+- 29 teams across WEB, APP, EPS, PDA, BIG platforms
+- Source systems varied: WEB = `ado_sync`, OOH/EPS/BIG/APP = `jira_sync`
+- 15 activity events seeded for realistic feed
+
+---
+
+## UI Architecture
+
+### Planning Header (red bar, all planning pages)
+Contains: Royal Mail logo area (sidebar), ART selector buttons, Demo chip.
+Does NOT contain: Card view toggle (moved to filter row), Planning Stage pill (future).
+
+### Left Sidebar
+- Collapsible/expandable — state persisted to localStorage
+- Collapsed: 52px, icons only with tooltips
+- Expanded: 180px, icons + labels
+- Config section (Demo Mode, Admin, Help) pinned to bottom via mt-auto
+
+### Activity Feed Panel
+- Collapsible right-side panel on all planning pages
+- Opens at 600px width (max)
+- Resizable via drag handle (desktop/tablet only)
+- Filter popover: Type, Date range, ART, Platform, Value Stream, Team
+- Date range pre-populated with active PI start/end dates
+- Standalone full-screen page at `/activity`
+
+### Sorting Frame Board
+- Sticky sprint header row (Sprint 1–6 with dates) — appears once at top
+- VS sections with coloured headers (vs1–vs8 warm RMG palette)
+- Team rows span full width as sub-headers within VS sections
+- Feature cards: white, pop against VS background
+- Stories expandable under each feature card in Detailed mode
+- Story-sprint dot indicators on cards (S1 ●●● S2 ●●)
+
+---
+
+## Program Increment Management
+
+When creating a new Program Increment, Dispatch:
+1. Takes: PI name, start date, sprint count, sprint length (default 14 days)
+2. Derives next sprint number from the highest existing sprint across all real PIs
+3. DEMO — and TEST — prefixed PIs always start from Sprint 1 (sandboxed)
+4. Sprint numbering resets to Sprint 1 at the start of each financial year (Apr 1)
+5. Auto-generates sprint records with correct date ranges
+6. Shows a **preview table** with editable sprint names for user confirmation
+7. Carry-forward: copies participating teams and ARTs from previous PI (P2 TODO)
 No `manually_edited` flag — BAU tooling is always the authority. These rules are documented in Help Centre and shown in-situ from the Import UI.
 
 ---
@@ -329,6 +407,33 @@ The current stage is stored on `program_increments.current_stage` (integer 1–6
 
 ---
 
+## Design System
+
+```ts
+// tailwind.config.ts
+colors: {
+  royalRed:     '#EE2722',   // Official RMG brand red
+  royalYellow:  '#FDDD1C',   // Official RMG brand yellow — Demo Mode banner
+  success:      '#16a34a',
+  warning:      '#d97706',
+  danger:       '#dc2626',
+  neutral:      '#6b7280',
+  surface:      '#ffffff',
+  surfaceSubtle:'#f9fafb',
+  border:       '#e5e7eb',
+  textPrimary:  '#111827',
+  textMuted:    '#6b7280',
+  // Value Stream accent palette — warm RMG brand-derived tones
+  vs1: '#fce7e7', vs2: '#fef9c3', vs3: '#ffedd5', vs4: '#fce7f3',
+  vs5: '#fef3c7', vs6: '#f0fdf4', vs7: '#f0f9ff', vs8: '#f5f3ff',
+}
+```
+
+Royal Mail logo: `public/Royal_Mail_logo_2024.svg`
+Stripe motif: used as diagonal watermark on planning header (opacity 0.12)
+
+---
+
 ## Provider Pattern (Integration-Ready)
 
 ```
@@ -383,6 +488,10 @@ Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
 | `story_key` in `snapshot_stories` | `ticket_key` | DB |
 | All UI labels "Planning Cycle" | "Program Increment" | TypeScript/TSX |
 | `lib/admin/planningCycles.ts` | `lib/admin/programIncrements.ts` | TypeScript |
+| `lib/admin/initiatives.ts` | `lib/admin/valueStreams.ts` | TypeScript |
+| All TypeScript types `Initiative` | `ValueStream` | TypeScript |
+| `initiatives` table | `value_streams` | DB + all TypeScript |
+| `initiative_id` columns | `value_stream_id` | DB + all TypeScript |
 
 ---
 
@@ -412,6 +521,10 @@ Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
 | `planning_cycle_id` columns need renaming to `program_increment_id` | 🟠 P2 | DB + all TypeScript |
 | `status` column ambiguous — needs renaming to `workflow_status` | 🟠 P2 | `features`, `stories` |
 | `dependency_*` column prefix redundant | 🟠 P2 | `dependencies`, `snapshot_dependencies` |
+| `initiatives` table needs renaming to `value_streams` | 🟠 P2 | DB + all TypeScript |
+| `getActiveOrSelectedPlanningCycle` duplicated | 🟠 P2 | `lib/supabase/dashboard.ts` + `sortingFrame.ts` |
+| Snapshot rebuild is destructive (no deterministic merge) | 🟠 P2 | `lib/admin/imports.ts` |
+| Demo Mode simulation not fully implemented | 🟠 P2 | `store/useDispatchStore.ts` |
 | `getActiveOrSelectedPlanningCycle` duplicated | 🟠 P2 | `lib/supabase/dashboard.ts` + `sortingFrame.ts` |
 | Snapshot rebuild is destructive (no merge strategy) | 🟠 P2 | `lib/admin/imports.ts` |
 | Supabase null guards are dead code | 🟡 P3 | `lib/admin/*.ts` |

@@ -58,8 +58,13 @@ type DbTeam = {
   platforms?: { id: string; name: string } | null;
 };
 
-type DbStoryCount = {
+type DbStory = {
+  id: string;
+  ticket_key: string;
+  title: string;
   feature_id: string | null;
+  sprint_id: string | null;
+  status: string | null;
 };
 
 type DbDependency = {
@@ -217,25 +222,26 @@ export async function getTeamsByIds(teamIds: string[]): Promise<DbTeam[]> {
   return (data ?? []) as unknown as DbTeam[];
 }
 
-export async function getStoryCountsByFeature(
+export async function getStoriesForCycle(
   cycleId: string
-): Promise<Map<string, number>> {
+): Promise<Map<string, DbStory[]>> {
   const supabase = getSupabaseServerClient();
 
   const { data } = await supabase
     .from('stories')
-    .select('feature_id')
+    .select('id, ticket_key, title, feature_id, sprint_id, status')
     .eq('planning_cycle_id', cycleId)
     .not('feature_id', 'is', null);
 
-  const counts = new Map<string, number>();
+  const map = new Map<string, DbStory[]>();
 
-  ((data ?? []) as DbStoryCount[]).forEach((row) => {
+  ((data ?? []) as DbStory[]).forEach((row) => {
     if (!row.feature_id) return;
-    counts.set(row.feature_id, (counts.get(row.feature_id) ?? 0) + 1);
+    if (!map.has(row.feature_id)) map.set(row.feature_id, []);
+    map.get(row.feature_id)!.push(row);
   });
 
-  return counts;
+  return map;
 }
 
 export async function getDependenciesByFeature(
@@ -312,33 +318,53 @@ export async function getSortingFrameData(input: {
     };
   }
 
-  const [sprints, initiatives, rawFeatures, storyCounts, dependencyCounts] =
+  const [sprints, initiatives, rawFeatures, rawStories, dependencyCounts] =
     await Promise.all([
       getCycleSprints(cycle.id),
       getInitiativesForArt(cycle.id, selectedArtId),
       getFeaturesForSortingFrame(cycle.id, selectedArtId),
-      getStoryCountsByFeature(cycle.id),
+      getStoriesForCycle(cycle.id),
       getDependenciesByFeature(cycle.id),
     ]);
 
-  const features: Feature[] = rawFeatures.map((feature) => ({
-    id: feature.id,
-    ticketKey: feature.ticket_key,
-    title: feature.title,
-    initiativeId: feature.initiative_id ?? 'unknown-initiative',
-    teamId: feature.team_id ?? 'unknown-team',
-    sprintId: feature.sprint_id,
-    sourceUrl: feature.source_url,
-    commitmentStatus: feature.commitment_status,
-    status: feature.status,
-    sourceSystem: feature.source_system,
-    storyCount: storyCounts.get(feature.id) ?? 0,
-    dependencyCounts: dependencyCounts.get(feature.id) ?? {
-      requires: 0,
-      blocks: 0,
-      conflict: 0,
-    },
-  }));
+  // Build sprint-number lookup so stories (and features) can resolve S1/S2 labels.
+  const sprintNumberById = new Map(
+    sprints.map((s) => [s.id, s.sprint_number])
+  );
+
+  const features: Feature[] = rawFeatures.map((feature) => {
+    const featureStories = (rawStories.get(feature.id) ?? []).map((s) => ({
+      id: s.id,
+      ticketKey: s.ticket_key,
+      title: s.title,
+      sprintId: s.sprint_id,
+      sprintNumber: s.sprint_id ? (sprintNumberById.get(s.sprint_id) ?? null) : null,
+      status: s.status,
+    }));
+
+    return {
+      id: feature.id,
+      ticketKey: feature.ticket_key,
+      title: feature.title,
+      initiativeId: feature.initiative_id ?? 'unknown-initiative',
+      teamId: feature.team_id ?? 'unknown-team',
+      sprintId: feature.sprint_id,
+      sprintNumber: feature.sprint_id
+        ? (sprintNumberById.get(feature.sprint_id) ?? null)
+        : null,
+      sourceUrl: feature.source_url,
+      commitmentStatus: feature.commitment_status,
+      status: feature.status,
+      sourceSystem: feature.source_system,
+      storyCount: featureStories.length,
+      dependencyCounts: dependencyCounts.get(feature.id) ?? {
+        requires: 0,
+        blocks: 0,
+        conflict: 0,
+      },
+      stories: featureStories,
+    };
+  });
 
   const teamIds = [
     ...new Set(
