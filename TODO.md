@@ -80,12 +80,12 @@ Active work — tackle these before anything else.
 
 ## 🔴 P1 — Supabase Integration Gaps
 
-- [ ] **Connect Team Planning to Supabase**
-  - Create `lib/supabase/teamPlanning.ts` data fetcher
-  - Query: teams, features, stories, sprints for active PI + selected ART
-  - Convert `app/team-planning/page.tsx` to server component
-  - Pass `initialData` to client board (same pattern as Sorting Frame)
-  - Team-centric view: stories are the primary unit, features provide context
+- [x] **Connect Team Planning to Supabase**
+  - Created `lib/supabase/teamPlanning.ts` — stories-first fetcher (team → sprint → feature → stories)
+  - Created `components/team-planning/TeamPlanningBoard.tsx` — client board (same pattern as SortingFrameBoard)
+  - Created `app/api/team-planning/route.ts` — API route for ART switching
+  - Converted `app/team-planning/page.tsx` to server component
+  - ART switching re-fetches via API route; sticky sprint header aligned with team rows
 
 - [ ] **Connect Dependencies to Supabase**
   - Fetch real dependency data from `dependencies` table
@@ -345,7 +345,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Features & Stories | ✅ Done | |
 | Dependencies | ✅ Done | Includes all 8 types |
 | Sorting Frame | ⬜ Needs update | Sticky header, VS colours, story expansion |
-| Team Planning Room | ⬜ Not yet | Update when P1 complete |
+| Team Planning Room | ⬜ Needs article | Stories-first board, ART filter, sprint columns, feature sub-headers |
 | Dependencies Near You | ⬜ Not yet | Update when P1 complete |
 | Live Tracking Dashboard | ⬜ Needs update | Colour-coded KPIs |
 | Admin Control Centre | ⬜ Needs update | ART ordering, Value Streams tab |
