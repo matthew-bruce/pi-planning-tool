@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { formatSprintRange } from '@/lib/utils';
 import type {
   TeamPlanningData,
   TeamPlanningFeatureGroup,
@@ -12,6 +11,7 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
 import { WarningBanner } from '@/components/ui/WarningBanner';
+import { SprintHeader } from '@/components/ui/SprintHeader';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 type Props = { initialData: TeamPlanningData };
@@ -216,26 +216,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
               the user scrolls through team sections.
               The flex layout mirrors every team row exactly so column widths align.
             */}
-            <div
-              className="sticky top-0 z-30 mb-2 border-b border-gray-200 shadow-sm"
-              style={{ backgroundColor: '#f3f4f6' }}
-            >
-              <div className="flex divide-x divide-gray-200 px-px">
-                {data.sprints.map((sprint) => (
-                  <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
-                    <div
-                      className="font-semibold text-gray-800"
-                      style={{ fontSize: 14 }}
-                    >
-                      {sprint.name ?? `Sprint ${sprint.number}`}
-                    </div>
-                    <div className="text-gray-500" style={{ fontSize: 11 }}>
-                      {formatSprintRange(sprint.startDate, sprint.endDate)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SprintHeader sprints={data.sprints} />
 
             {/* Team sections */}
             <div className="space-y-3">
