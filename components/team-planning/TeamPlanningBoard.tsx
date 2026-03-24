@@ -12,6 +12,7 @@ import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
 import { WarningBanner } from '@/components/ui/WarningBanner';
 import { SprintHeader } from '@/components/ui/SprintHeader';
+import { EmptyCell } from '@/components/ui/EmptyCell';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 type Props = { initialData: TeamPlanningData };
@@ -288,14 +289,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
                               style={{ minHeight: 60 }}
                             >
                               {col.featureGroups.length === 0 ? (
-                                <div className="flex min-h-[48px] items-center justify-center">
-                                  <span
-                                    className="text-gray-200"
-                                    style={{ fontSize: 11 }}
-                                  >
-                                    —
-                                  </span>
-                                </div>
+                                <EmptyCell />
                               ) : (
                                 col.featureGroups.map((group) => (
                                   <FeatureGroup key={group.featureId} group={group} />
