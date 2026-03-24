@@ -95,13 +95,13 @@ Active work — tackle these before anything else.
   - Converted `app/team-planning/page.tsx` to server component
   - ART switching re-fetches via API route; sticky sprint header aligned with team rows
 
-- [ ] **Connect Dependencies to Supabase**
-  - Fetch real dependency data from `dependencies` table
-  - Fetch features and teams for active PI
-  - Wire reactflow nodes/edges to live data
-  - Retain ART and platform filters
-  - Node click → side drawer with dependency details
-  - Gold dataset has 27 real dependencies — will look impressive
+- [x] **Connect Dependencies to Supabase**
+  - Created `lib/types/dependencies.ts` — DependencyNode, DependencyEdge, DependenciesData canonical types
+  - Created `lib/supabase/dependencies.ts` — getDependenciesData(artId?) fetcher; joins features → teams → platforms → sprints → initiatives; team→ART via team_art_assignments; external entity nodes never skipped
+  - Created `components/dependencies/DependenciesGraph.tsx` — reactflow client component with dagre LR layout, custom feature/external node renderers, criticality-coloured edges, ART selector, side panel on node click
+  - Converted `app/dependencies/page.tsx` to server component (same pattern as Sorting Frame / Team Planning)
+  - Removed all Zustand imports from the dependencies page
+  - 27 real dependencies render as graph; 11 external entity nodes shown with dashed border
 
 - [ ] **Connect Triage to Supabase**
   - Fetch unallocated features (`sprint_id IS NULL`) for active PI
@@ -354,7 +354,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Dependencies | ✅ Done | Includes all 8 types |
 | Sorting Frame | ⬜ Needs update | Sticky header, VS colours, story expansion |
 | Team Planning Room | ⬜ Needs article | Stories-first board, ART filter, sprint columns, feature sub-headers |
-| Dependencies Near You | ⬜ Not yet | Update when P1 complete |
+| Dependencies Near You | ⬜ Needs article | Now Supabase-connected — write article covering graph layout, node types, side panel, ART filter |
 | Live Tracking Dashboard | ⬜ Needs update | Colour-coded KPIs |
 | Admin Control Centre | ⬜ Needs update | ART ordering, Value Streams tab |
 | Data Import | ✅ Done | Merge rules, in-situ guidance |

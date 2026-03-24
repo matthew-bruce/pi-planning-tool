@@ -84,7 +84,7 @@ app/
   dashboard/          – Dashboard page (server component)
   sorting-frame/      – Sorting Frame page (server component)
   team-planning/      – Team Planning (server component + Supabase-connected)
-  dependencies/       – Dependencies (client-only, Zustand — P1 gap)
+  dependencies/       – Dependencies (server component + Supabase-connected)
   triage/             – Bulk triage (client-only, Zustand — P1 gap)
   activity/           – Standalone Activity Feed page
   help/               – Static help page
@@ -122,8 +122,10 @@ lib/
     server.ts         – Supabase client factory (throws if env vars missing)
     sortingFrame.ts   – Sorting Frame data queries (includes stories)
     teamPlanning.ts   – Team Planning data queries (stories-first, team → sprint → feature → stories)
+    dependencies.ts   – Dependencies data queries (deps → features → teams → platforms → ARTs → sprints → value streams)
   types/
     dashboard.ts      – DashboardData type (canonical source of truth)
+    dependencies.ts   – DependencyNode, DependencyEdge, DependenciesData canonical types
   planning/
     sprintGeneration.ts   – Auto-generate sprint date ranges from PI config
     sprintMapping.ts      – Map imported sprint names to PI sprints
@@ -149,7 +151,7 @@ data/
 Dispatch currently has two data layers that coexist:
 
 ### 1. Supabase Layer (Production data)
-Used by: Dashboard, Sorting Frame, Admin
+Used by: Dashboard, Sorting Frame, Team Planning, Dependencies, Admin
 
 ```
 Page (Server Component)
@@ -513,7 +515,7 @@ Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
 | Issue | Severity | Location |
 |---|---|---|
 | Team Planning not Supabase-connected | ✅ Fixed | `app/team-planning/` |
-| Dependencies page not Supabase-connected | 🔴 P1 | `app/dependencies/` |
+| Dependencies page not Supabase-connected | ✅ Fixed | `app/dependencies/` |
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
 | ART switching bug on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
 | Permanent "Loading…" on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |
