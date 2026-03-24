@@ -39,8 +39,10 @@ type DbFeature = {
   ticket_key: string;
   title: string;
   sprint_id: string | null;
+  team_id: string | null;
   commitment_status: string | null;
   source_url: string | null;
+  initiatives?: { name: string } | null;
 };
 
 // ─── Public types (passed to client component as initialData) ─────────────────
@@ -61,6 +63,7 @@ export type TeamPlanningFeatureGroup = {
   featureTitle: string;
   featureSourceUrl: string | null;
   featureCommitmentStatus: string | null;
+  valueStreamName: string | null;
   stories: TeamPlanningStory[];
 };
 
@@ -80,6 +83,7 @@ export type TeamPlanningTeam = {
   name: string;
   platform: string | null;
   sprintColumns: TeamPlanningSprintColumn[];
+  parkingLotFeatureGroups: TeamPlanningFeatureGroup[];
   totalStories: number;
   totalPoints: number;
 };
@@ -162,7 +166,7 @@ async function getTeamsForArt(
   return (teams ?? []) as unknown as DbTeam[];
 }
 
-/** All stories for the given teams in this cycle, including unassigned sprints. */
+/** All stories for the given teams in this cycle (sprint-assigned and parking lot). */
 async function getStoriesForTeams(
   cycleId: string,
   teamIds: string[]
@@ -181,7 +185,7 @@ async function getStoriesForTeams(
   return (data ?? []) as DbStory[];
 }
 
-/** Feature lookup map for a list of feature IDs. */
+/** Feature lookup map for a list of feature IDs (includes initiative/value-stream name). */
 async function getFeaturesByIds(
   featureIds: string[]
 ): Promise<Map<string, DbFeature>> {
@@ -190,12 +194,37 @@ async function getFeaturesByIds(
 
   const { data } = await supabase
     .from('features')
-    .select('id, ticket_key, title, sprint_id, commitment_status, source_url')
+    .select(
+      'id, ticket_key, title, sprint_id, team_id, commitment_status, source_url, initiatives(name)'
+    )
     .in('id', featureIds);
 
   const map = new Map<string, DbFeature>();
-  ((data ?? []) as DbFeature[]).forEach((f) => map.set(f.id, f));
+  ((data ?? []) as unknown as DbFeature[]).forEach((f) => map.set(f.id, f));
   return map;
+}
+
+/**
+ * Features assigned to these teams that have no sprint (parking lot),
+ * including the initiative/value-stream name.
+ */
+async function getParkingLotFeaturesForTeams(
+  cycleId: string,
+  teamIds: string[]
+): Promise<DbFeature[]> {
+  if (!teamIds.length) return [];
+  const supabase = getSupabaseServerClient();
+
+  const { data } = await supabase
+    .from('features')
+    .select(
+      'id, ticket_key, title, sprint_id, team_id, commitment_status, source_url, initiatives(name)'
+    )
+    .eq('planning_cycle_id', cycleId)
+    .in('team_id', teamIds)
+    .is('sprint_id', null);
+
+  return (data ?? []) as unknown as DbFeature[];
 }
 
 // ─── Main fetcher ─────────────────────────────────────────────────────────────
@@ -235,9 +264,12 @@ export async function getTeamPlanningData(input: {
   const dbTeams = await getTeamsForArt(cycle.id, selectedArtId);
   const teamIds = dbTeams.map((t) => t.id);
 
-  const rawStories = await getStoriesForTeams(cycle.id, teamIds);
+  const [rawStories, parkingLotFeatures] = await Promise.all([
+    getStoriesForTeams(cycle.id, teamIds),
+    getParkingLotFeaturesForTeams(cycle.id, teamIds),
+  ]);
 
-  // Resolve all parent features in one query.
+  // Resolve all parent features for sprint-assigned stories in one query.
   const featureIds = [
     ...new Set(
       rawStories
@@ -247,38 +279,48 @@ export async function getTeamPlanningData(input: {
   ];
   const featuresById = await getFeaturesByIds(featureIds);
 
+  // Merge parking lot features into the lookup map so feature sub-headers
+  // are available even when a parking lot feature has no stories yet.
+  parkingLotFeatures.forEach((f) => featuresById.set(f.id, f));
+
+  // Helper: map a DbFeature to the value-stream name string.
+  function vsName(f: DbFeature): string | null {
+    return (f.initiatives as { name: string } | null)?.name ?? null;
+  }
+
+  // Helper: map a DbStory to a TeamPlanningStory value object.
+  function toStory(s: DbStory): TeamPlanningStory {
+    return {
+      id: s.id,
+      ticketKey: s.ticket_key,
+      title: s.title,
+      storyPoints: s.story_points !== null ? Number(s.story_points) : null,
+      status: s.status,
+      commitmentStatus: s.commitment_status,
+      sourceUrl: s.source_url,
+    };
+  }
+
   // Build the Team → Sprint → FeatureGroup → Stories hierarchy.
   const teams: TeamPlanningTeam[] = dbTeams
     .map((dbTeam) => {
       const teamStories = rawStories.filter((s) => s.team_id === dbTeam.id);
 
+      // ── Sprint columns ────────────────────────────────────────────────────
       const sprintColumns: TeamPlanningSprintColumn[] = sprints.map((sprint) => {
         const sprintStories = teamStories.filter(
           (s) => s.sprint_id === sprint.id
         );
 
-        // Group stories by parent feature.
         const featureMap = new Map<string, TeamPlanningStory[]>();
         const noFeatureStories: TeamPlanningStory[] = [];
 
         sprintStories.forEach((s) => {
-          const story: TeamPlanningStory = {
-            id: s.id,
-            ticketKey: s.ticket_key,
-            title: s.title,
-            storyPoints:
-              s.story_points !== null ? Number(s.story_points) : null,
-            status: s.status,
-            commitmentStatus: s.commitment_status,
-            sourceUrl: s.source_url,
-          };
-
           if (s.feature_id && featuresById.has(s.feature_id)) {
-            if (!featureMap.has(s.feature_id))
-              featureMap.set(s.feature_id, []);
-            featureMap.get(s.feature_id)!.push(story);
+            if (!featureMap.has(s.feature_id)) featureMap.set(s.feature_id, []);
+            featureMap.get(s.feature_id)!.push(toStory(s));
           } else {
-            noFeatureStories.push(story);
+            noFeatureStories.push(toStory(s));
           }
         });
 
@@ -292,11 +334,11 @@ export async function getTeamPlanningData(input: {
             featureTitle: feature.title,
             featureSourceUrl: feature.source_url,
             featureCommitmentStatus: feature.commitment_status,
+            valueStreamName: vsName(feature),
             stories,
           };
         });
 
-        // Orphan stories (no linked feature) go in a trailing group.
         if (noFeatureStories.length > 0) {
           featureGroups.push({
             featureId: 'unassigned',
@@ -304,6 +346,7 @@ export async function getTeamPlanningData(input: {
             featureTitle: 'No feature',
             featureSourceUrl: null,
             featureCommitmentStatus: null,
+            valueStreamName: null,
             stories: noFeatureStories,
           });
         }
@@ -326,9 +369,42 @@ export async function getTeamPlanningData(input: {
         };
       });
 
-      const assignedStories = teamStories.filter((s) => s.sprint_id !== null);
-      const totalStories = assignedStories.length;
-      const totalPoints = assignedStories.reduce(
+      // ── Parking lot ───────────────────────────────────────────────────────
+      // Stories with no sprint assigned for this team.
+      const parkingStories = teamStories.filter((s) => s.sprint_id === null);
+      const parkingFeatureMap = new Map<string, TeamPlanningStory[]>();
+
+      parkingStories.forEach((s) => {
+        if (s.feature_id && featuresById.has(s.feature_id)) {
+          if (!parkingFeatureMap.has(s.feature_id))
+            parkingFeatureMap.set(s.feature_id, []);
+          parkingFeatureMap.get(s.feature_id)!.push(toStory(s));
+        }
+      });
+
+      // Include parking lot features with no stories yet (feature header only).
+      parkingLotFeatures
+        .filter((f) => f.team_id === dbTeam.id && !parkingFeatureMap.has(f.id))
+        .forEach((f) => parkingFeatureMap.set(f.id, []));
+
+      const parkingLotFeatureGroups: TeamPlanningFeatureGroup[] = [
+        ...parkingFeatureMap.entries(),
+      ].map(([fId, stories]) => {
+        const feature = featuresById.get(fId)!;
+        return {
+          featureId: fId,
+          featureTicketKey: feature.ticket_key,
+          featureTitle: feature.title,
+          featureSourceUrl: feature.source_url,
+          featureCommitmentStatus: feature.commitment_status,
+          valueStreamName: vsName(feature),
+          stories,
+        };
+      });
+
+      // ── Totals (all stories including parking lot) ────────────────────────
+      const totalStories = teamStories.length;
+      const totalPoints = teamStories.reduce(
         (sum, s) =>
           sum + (s.story_points !== null ? Number(s.story_points) : 0),
         0
@@ -341,11 +417,12 @@ export async function getTeamPlanningData(input: {
           (dbTeam.platforms as { name: string } | null | undefined)?.name ??
           null,
         sprintColumns,
+        parkingLotFeatureGroups,
         totalStories,
         totalPoints,
       };
     })
-    // Only show teams that have at least one assigned story.
+    // Only show teams that have at least one story (sprint or parking lot).
     .filter((team) => team.totalStories > 0);
 
   return {

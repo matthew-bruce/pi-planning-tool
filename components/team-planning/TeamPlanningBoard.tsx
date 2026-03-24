@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Inbox } from 'lucide-react';
 import { formatSprintRange } from '@/lib/utils';
 import type {
   TeamPlanningData,
@@ -13,6 +13,33 @@ import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 
 type Props = { initialData: TeamPlanningData };
 
+// ─── Colour constants ─────────────────────────────────────────────────────────
+
+const VS_COLOURS = [
+  { bg: '#fce7e7', text: '#991b1b' },
+  { bg: '#fef9c3', text: '#854d0e' },
+  { bg: '#ffedd5', text: '#9a3412' },
+  { bg: '#fce7f3', text: '#831843' },
+  { bg: '#fef3c7', text: '#92400e' },
+  { bg: '#f0fdf4', text: '#14532d' },
+  { bg: '#f0f9ff', text: '#0c4a6e' },
+  { bg: '#f5f3ff', text: '#4c1d95' },
+];
+
+const PLATFORM_BORDER: Record<string, string> = {
+  WEB: '#60a5fa',  // blue-400
+  APP: '#c084fc',  // purple-400
+  EPS: '#fb923c',  // orange-400
+  PDA: '#2dd4bf',  // teal-400
+  BIG: '#eab308',  // yellow-500
+  ETP: '#4ade80',  // green-400
+};
+
+function platformBorderColor(platform: string | null): string {
+  if (!platform) return '#d1d5db'; // gray-300
+  return PLATFORM_BORDER[platform.toUpperCase()] ?? '#d1d5db';
+}
+
 // ─── Small presentational helpers ────────────────────────────────────────────
 
 function storyStatusColor(status: string | null): string {
@@ -21,21 +48,6 @@ function storyStatusColor(status: string | null): string {
   if (s === 'in progress') return '#d97706';
   if (s === 'blocked') return '#dc2626';
   return '#9ca3af';
-}
-
-function StatusDot({ status }: { status: string | null }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 7,
-        height: 7,
-        borderRadius: '50%',
-        backgroundColor: storyStatusColor(status),
-        flexShrink: 0,
-      }}
-    />
-  );
 }
 
 function getCommitmentPill(commitmentStatus: string | null | undefined) {
@@ -59,8 +71,18 @@ function StoryRow({
   const displayTitle = stripFeaturePrefix(story.title, featureTitle);
 
   return (
-    <div className="flex items-start gap-1.5 py-1">
-      <StatusDot status={story.status} />
+    <div className="flex items-start gap-1.5 py-1 px-1 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+      <span
+        style={{
+          display: 'inline-block',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          backgroundColor: storyStatusColor(story.status),
+          flexShrink: 0,
+          marginTop: 4,
+        }}
+      />
       <div className="min-w-0 flex-1">
         <span
           className="font-mono shrink-0"
@@ -68,9 +90,21 @@ function StoryRow({
         >
           {story.ticketKey}
         </span>{' '}
-        <span className="text-gray-700 leading-snug" style={{ fontSize: 12 }}>
-          {displayTitle}
-        </span>
+        {story.sourceUrl ? (
+          <a
+            href={story.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-700 hover:underline leading-snug"
+            style={{ fontSize: 12 }}
+          >
+            {displayTitle}
+          </a>
+        ) : (
+          <span className="text-gray-700 leading-snug" style={{ fontSize: 12 }}>
+            {displayTitle}
+          </span>
+        )}
       </div>
       {story.storyPoints !== null && (
         <span
@@ -85,24 +119,36 @@ function StoryRow({
   );
 }
 
-// ─── Feature group (sub-header + stories) ────────────────────────────────────
+// ─── Feature group (sub-header + collapsible stories) ────────────────────────
 
-function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
+function FeatureGroup({
+  group,
+  vsColour,
+  collapsed,
+  onToggle,
+}: {
+  group: TeamPlanningFeatureGroup;
+  vsColour: { bg: string; text: string };
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   const pill = getCommitmentPill(group.featureCommitmentStatus);
   const isUnassigned = group.featureId === 'unassigned';
 
   return (
     <div className="mb-2">
       {/* Feature sub-header */}
-      <div
-        className="mb-1 rounded px-1.5 py-1"
-        style={{ backgroundColor: '#f3f4f6' }}
+      <button
+        className="w-full text-left rounded px-1.5 py-1 mb-0.5"
+        style={{ backgroundColor: vsColour.bg }}
+        onClick={onToggle}
+        disabled={isUnassigned}
       >
         {!isUnassigned && (
           <div className="flex items-center justify-between gap-1 min-w-0">
             <span
               className="font-mono shrink-0"
-              style={{ fontSize: 9, color: '#991b1b', opacity: 0.75 }}
+              style={{ fontSize: 9, color: vsColour.text, opacity: 0.85 }}
             >
               {group.featureTicketKey}
             </span>
@@ -114,29 +160,74 @@ function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
             </span>
           </div>
         )}
-        <div
-          className="truncate font-medium text-gray-700"
-          style={{ fontSize: isUnassigned ? 11 : 11 }}
-          title={group.featureTitle}
-        >
-          {isUnassigned ? (
-            <span className="italic text-gray-400">{group.featureTitle}</span>
+        <div className="flex items-center gap-1 min-w-0">
+          {!isUnassigned && (
+            <ChevronDown
+              size={10}
+              style={{
+                flexShrink: 0,
+                color: vsColour.text,
+                transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                transition: 'transform 150ms ease-out',
+              }}
+            />
+          )}
+          <span
+            className="truncate font-medium leading-snug"
+            style={{
+              fontSize: 11,
+              color: isUnassigned ? '#9ca3af' : vsColour.text,
+              fontStyle: isUnassigned ? 'italic' : undefined,
+            }}
+            title={group.featureTitle}
+          >
+            {group.featureTitle}
+          </span>
+        </div>
+      </button>
+
+      {/* Stories — animated collapse */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: collapsed ? '0fr' : '1fr',
+          transition: collapsed
+            ? 'grid-template-rows 150ms ease-in'
+            : 'grid-template-rows 180ms ease-out',
+        }}
+      >
+        <div style={{ overflow: 'hidden' }}>
+          {group.stories.length === 0 ? (
+            <div
+              className="flex items-center gap-1 px-1 py-1"
+              style={{ color: '#d1d5db', fontSize: 11 }}
+            >
+              <span className="italic">No stories</span>
+            </div>
           ) : (
-            group.featureTitle
+            group.stories.map((story) => (
+              <StoryRow
+                key={story.id}
+                story={story}
+                featureTitle={group.featureTitle}
+              />
+            ))
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Stories */}
-      <div className="pl-1">
-        {group.stories.map((story) => (
-          <StoryRow
-            key={story.id}
-            story={story}
-            featureTitle={group.featureTitle}
-          />
-        ))}
-      </div>
+// ─── Empty sprint cell ────────────────────────────────────────────────────────
+
+function EmptyCell() {
+  return (
+    <div className="flex flex-col min-h-[48px] items-center justify-center gap-0.5">
+      <Inbox size={16} className="text-gray-200" />
+      <span className="text-gray-300" style={{ fontSize: 11 }}>
+        Empty
+      </span>
     </div>
   );
 }
@@ -146,6 +237,10 @@ function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
 export function TeamPlanningBoard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+  // collapsedFeatures: featureId → boolean (true = collapsed)
+  const [collapsedFeatures, setCollapsedFeatures] = useState<
+    Record<string, boolean>
+  >({});
   const [collapsedTeams, setCollapsedTeams] = useState<
     Record<string, boolean>
   >({});
@@ -153,8 +248,6 @@ export function TeamPlanningBoard({ initialData }: Props) {
   const { selectedArtId, setSelectedArtId, setArts } = useDispatchStore();
 
   // Sync store when server-rendered initialData arrives.
-  // Must NOT include selectedArtId in deps — user ART clicks must not
-  // re-run this effect and overwrite their selection with the stale server value.
   useEffect(() => {
     setArts(initialData.arts);
     setData(initialData);
@@ -197,6 +290,33 @@ export function TeamPlanningBoard({ initialData }: Props) {
     };
   }, [selectedArtId, data.cycle?.id, data.selectedArtId]);
 
+  // ── VS colour map: sorted unique VS names → stable colour index ──────────
+  const vsColorIndex = (() => {
+    const names = new Set<string>();
+    for (const team of data.teams) {
+      for (const col of team.sprintColumns)
+        for (const g of col.featureGroups)
+          if (g.valueStreamName) names.add(g.valueStreamName);
+      for (const g of team.parkingLotFeatureGroups)
+        if (g.valueStreamName) names.add(g.valueStreamName);
+    }
+    const sorted = [...names].sort();
+    return new Map(sorted.map((n, i) => [n, i]));
+  })();
+
+  function getVsColour(vsName: string | null) {
+    if (!vsName) return { bg: '#f3f4f6', text: '#374151' };
+    const idx = vsColorIndex.get(vsName) ?? 0;
+    return VS_COLOURS[idx % VS_COLOURS.length];
+  }
+
+  function toggleFeature(featureId: string) {
+    setCollapsedFeatures((prev) => ({
+      ...prev,
+      [featureId]: !prev[featureId],
+    }));
+  }
+
   // ── Empty / error states ──────────────────────────────────────────────────
 
   if (!data.cycle) {
@@ -234,19 +354,18 @@ export function TeamPlanningBoard({ initialData }: Props) {
         </p>
       </div>
 
-      {/* ── Board ────────────────────────────────────────────────────────── */}
-      <div className="min-w-0">
+      {/* ── Board (horizontally scrollable) ──────────────────────────────── */}
+      <div className="overflow-x-auto">
         {noTeams ? (
           <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-500 text-center">
             No teams with assigned stories found for the selected ART and Program
             Increment.
           </div>
         ) : (
-          <>
+          <div style={{ minWidth: `${data.sprints.length * 180 + 200}px` }}>
             {/*
-              Sticky sprint header — appears once, sticks to viewport top as
-              the user scrolls through team sections.
-              The flex layout mirrors every team row exactly so column widths align.
+              Sticky sprint header — appears once, sticks to viewport top.
+              The flex layout mirrors every team row exactly for column alignment.
             */}
             <div
               className="sticky top-0 z-30 mb-2 border-b border-gray-200 shadow-sm"
@@ -254,7 +373,11 @@ export function TeamPlanningBoard({ initialData }: Props) {
             >
               <div className="flex divide-x divide-gray-200 px-px">
                 {data.sprints.map((sprint) => (
-                  <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
+                  <div
+                    key={sprint.id}
+                    className="flex-1 px-3 py-2"
+                    style={{ minWidth: 180 }}
+                  >
                     <div
                       className="font-semibold text-gray-800"
                       style={{ fontSize: 14 }}
@@ -266,18 +389,35 @@ export function TeamPlanningBoard({ initialData }: Props) {
                     </div>
                   </div>
                 ))}
+                {/* Parking lot header column */}
+                <div
+                  className="flex-none px-3 py-2"
+                  style={{ minWidth: 200 }}
+                >
+                  <div
+                    className="font-semibold text-gray-500"
+                    style={{ fontSize: 14 }}
+                  >
+                    Parking Lot
+                  </div>
+                  <div className="text-gray-400" style={{ fontSize: 11 }}>
+                    No sprint assigned
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Team sections */}
             <div className="space-y-3">
               {data.teams.map((team) => {
-                const collapsed = collapsedTeams[team.id];
+                const teamCollapsed = collapsedTeams[team.id];
+                const borderColor = platformBorderColor(team.platform);
 
                 return (
                   <section
                     key={team.id}
                     className="rounded border border-gray-200 overflow-hidden bg-white"
+                    style={{ borderLeft: `3px solid ${borderColor}` }}
                   >
                     {/* Team header bar */}
                     <button
@@ -294,17 +434,23 @@ export function TeamPlanningBoard({ initialData }: Props) {
                           size={14}
                           className="text-gray-400 shrink-0"
                           style={{
-                            transform: collapsed
+                            transform: teamCollapsed
                               ? 'rotate(-90deg)'
                               : 'rotate(0deg)',
                             transition: 'transform 150ms ease-out',
                           }}
                         />
-                        <span className="font-semibold text-gray-800" style={{ fontSize: 14 }}>
+                        <span
+                          className="font-semibold text-gray-800"
+                          style={{ fontSize: 14 }}
+                        >
                           {team.name}
                         </span>
                         {team.platform && (
-                          <span className="text-gray-400 font-normal" style={{ fontSize: 12 }}>
+                          <span
+                            className="text-gray-400 font-normal"
+                            style={{ fontSize: 12 }}
+                          >
                             ({team.platform})
                           </span>
                         )}
@@ -316,44 +462,41 @@ export function TeamPlanningBoard({ initialData }: Props) {
                       </span>
                     </button>
 
-                    {/* Sprint columns — animated collapse */}
+                    {/* Sprint columns + parking lot — animated collapse */}
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateRows: collapsed ? '0fr' : '1fr',
-                        transition: collapsed
+                        gridTemplateRows: teamCollapsed ? '0fr' : '1fr',
+                        transition: teamCollapsed
                           ? 'grid-template-rows 150ms ease-in'
                           : 'grid-template-rows 180ms ease-out',
                       }}
                     >
                       <div style={{ overflow: 'hidden' }}>
-                        {/*
-                          flex divide-x mirrors the sticky header above exactly —
-                          flex-1 on each column ensures widths align.
-                        */}
                         <div className="flex divide-x divide-gray-200">
+                          {/* Sprint columns */}
                           {team.sprintColumns.map((col) => (
                             <div
                               key={col.sprintId}
-                              className="flex-1 min-w-0 p-2"
-                              style={{ minHeight: 60 }}
+                              className="flex-1 p-2"
+                              style={{ minWidth: 180, minHeight: 60 }}
                             >
                               {col.featureGroups.length === 0 ? (
-                                <div className="flex min-h-[48px] items-center justify-center">
-                                  <span
-                                    className="text-gray-200"
-                                    style={{ fontSize: 11 }}
-                                  >
-                                    —
-                                  </span>
-                                </div>
+                                <EmptyCell />
                               ) : (
                                 col.featureGroups.map((group) => (
-                                  <FeatureGroup key={group.featureId} group={group} />
+                                  <FeatureGroup
+                                    key={group.featureId}
+                                    group={group}
+                                    vsColour={getVsColour(group.valueStreamName)}
+                                    collapsed={
+                                      collapsedFeatures[group.featureId] ?? false
+                                    }
+                                    onToggle={() => toggleFeature(group.featureId)}
+                                  />
                                 ))
                               )}
 
-                              {/* Sprint total — shown only when there are stories */}
                               {col.totalStories > 0 && (
                                 <div
                                   className="mt-1 border-t border-gray-100 pt-1 text-right text-gray-400"
@@ -367,6 +510,32 @@ export function TeamPlanningBoard({ initialData }: Props) {
                               )}
                             </div>
                           ))}
+
+                          {/* Parking lot column */}
+                          <div
+                            className="flex-none p-2"
+                            style={{
+                              minWidth: 200,
+                              minHeight: 60,
+                              backgroundColor: '#f9fafb',
+                            }}
+                          >
+                            {team.parkingLotFeatureGroups.length === 0 ? (
+                              <EmptyCell />
+                            ) : (
+                              team.parkingLotFeatureGroups.map((group) => (
+                                <FeatureGroup
+                                  key={group.featureId}
+                                  group={group}
+                                  vsColour={getVsColour(group.valueStreamName)}
+                                  collapsed={
+                                    collapsedFeatures[group.featureId] ?? false
+                                  }
+                                  onToggle={() => toggleFeature(group.featureId)}
+                                />
+                              ))
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -374,7 +543,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
