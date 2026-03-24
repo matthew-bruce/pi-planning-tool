@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Feature, Sprint } from '@/lib/models';
 import { formatSprintRange } from '@/lib/utils';
-import { FeatureCard } from '@/components/FeatureCard';
+import { FeatureCard } from '@/components/ui/FeatureCard';
 import { EmptyCell } from '@/components/ui/EmptyCell';
 
 type SprintColumnProps = {

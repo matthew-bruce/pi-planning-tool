@@ -3,7 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Feature } from '@/lib/models';
-import { FeatureCard } from '@/components/FeatureCard';
+import { FeatureCard } from '@/components/ui/FeatureCard';
 
 export function ParkingLotDrawer({ features }: { features: Feature[] }) {
   const { setNodeRef } = useDroppable({ id: 'parking-lot' });
