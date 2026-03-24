@@ -11,6 +11,7 @@ import type {
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
+import { WarningBanner } from '@/components/ui/WarningBanner';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 type Props = { initialData: TeamPlanningData };
@@ -172,17 +173,13 @@ export function TeamPlanningBoard({ initialData }: Props) {
 
   if (!data.cycle) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No active Program Increment configured.
-      </div>
+      <WarningBanner>No active Program Increment configured.</WarningBanner>
     );
   }
 
   if (!data.sprints.length) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No sprints configured for {data.cycle.name}.
-      </div>
+      <WarningBanner>No sprints configured for {data.cycle.name}.</WarningBanner>
     );
   }
 

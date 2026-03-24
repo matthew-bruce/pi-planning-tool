@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { formatSprintRange } from '@/lib/utils';
 import { Highlight } from '@/components/ui/Highlight';
+import { WarningBanner } from '@/components/ui/WarningBanner';
 import {
   DndContext,
   DragEndEvent,
@@ -246,17 +247,13 @@ export function SortingFrameBoard({ initialData }: Props) {
 
   if (!data.cycle) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No active Program Increment configured.
-      </div>
+      <WarningBanner>No active Program Increment configured.</WarningBanner>
     );
   }
 
   if (!data.sprints.length) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No sprints configured for {data.cycle.name}.
-      </div>
+      <WarningBanner>No sprints configured for {data.cycle.name}.</WarningBanner>
     );
   }
 
