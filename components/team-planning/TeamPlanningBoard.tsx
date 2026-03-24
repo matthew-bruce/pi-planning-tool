@@ -5,100 +5,41 @@ import { ChevronDown } from 'lucide-react';
 import type {
   TeamPlanningData,
   TeamPlanningFeatureGroup,
-  TeamPlanningStory,
 } from '@/lib/supabase/teamPlanning';
+import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
-import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
-import { getStatusPillClasses } from '@/components/ui/StatusPill';
 import { WarningBanner } from '@/components/ui/WarningBanner';
 import { SprintHeader } from '@/components/ui/SprintHeader';
 import { EmptyCell } from '@/components/ui/EmptyCell';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { StatusDot } from '@/components/ui/StatusDot';
+import { FeatureCardStatic } from '@/components/ui/FeatureCard';
 
 type Props = { initialData: TeamPlanningData };
 
-// ─── Small presentational helpers ────────────────────────────────────────────
+// ─── Adapter: TeamPlanningFeatureGroup → Feature ──────────────────────────────
 
-
-// ─── Story row ────────────────────────────────────────────────────────────────
-
-function StoryRow({
-  story,
-  featureTitle,
-}: {
-  story: TeamPlanningStory;
-  featureTitle: string;
-}) {
-  const displayTitle = stripFeaturePrefix(story.title, featureTitle);
-
-  return (
-    <div className="flex items-start gap-1.5 py-1">
-      <StatusDot status={story.status} />
-      <div className="min-w-0 flex-1">
-        <span className="shrink-0 font-mono text-[10px] text-red-800 opacity-80">
-          {story.ticketKey}
-        </span>{' '}
-        <span className="text-xs leading-snug text-gray-700">
-          {displayTitle}
-        </span>
-      </div>
-      {story.storyPoints !== null && (
-        <span
-          className="shrink-0 rounded bg-gray-100 px-1 text-[10px] font-medium text-gray-500"
-          title={`${story.storyPoints} story points`}
-        >
-          {story.storyPoints}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── Feature group (sub-header + stories) ────────────────────────────────────
-
-function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
-  const pill = getStatusPillClasses(group.featureCommitmentStatus);
-  const isUnassigned = group.featureId === 'unassigned';
-
-  return (
-    <div className="mb-2">
-      {/* Feature sub-header */}
-      <div className="mb-1 rounded bg-gray-100 px-1.5 py-1">
-        {!isUnassigned && (
-          <div className="flex min-w-0 items-center justify-between gap-1">
-            <span className="shrink-0 font-mono text-[9px] text-red-800 opacity-75">
-              {group.featureTicketKey}
-            </span>
-            <span className={`shrink-0 rounded-full px-1.5 text-[9px] font-medium ${pill.cls}`}>
-              {pill.label}
-            </span>
-          </div>
-        )}
-        <div
-          className="truncate text-[11px] font-medium text-gray-700"
-          title={group.featureTitle}
-        >
-          {isUnassigned ? (
-            <span className="italic text-gray-400">{group.featureTitle}</span>
-          ) : (
-            group.featureTitle
-          )}
-        </div>
-      </div>
-
-      {/* Stories */}
-      <div className="pl-1">
-        {group.stories.map((story) => (
-          <StoryRow
-            key={story.id}
-            story={story}
-            featureTitle={group.featureTitle}
-          />
-        ))}
-      </div>
-    </div>
-  );
+function groupToFeature(group: TeamPlanningFeatureGroup): Feature {
+  const stories: FeatureStory[] = group.stories.map((s) => ({
+    id: s.id,
+    ticketKey: s.ticketKey,
+    title: s.title,
+    sprintId: null,
+    sprintNumber: null,
+    status: s.status,
+  }));
+  return {
+    id: group.featureId,
+    ticketKey: group.featureTicketKey,
+    title: group.featureTitle,
+    initiativeId: '',
+    teamId: '',
+    sprintId: null,
+    sourceUrl: group.featureSourceUrl,
+    commitmentStatus: group.featureCommitmentStatus,
+    storyCount: group.stories.length,
+    dependencyCounts: { requires: 0, blocks: 0, conflict: 0 },
+    stories,
+  };
 }
 
 // ─── Main board ───────────────────────────────────────────────────────────────
@@ -275,9 +216,14 @@ export function TeamPlanningBoard({ initialData }: Props) {
                               {col.featureGroups.length === 0 ? (
                                 <EmptyCell />
                               ) : (
-                                col.featureGroups.map((group) => (
-                                  <FeatureGroup key={group.featureId} group={group} />
-                                ))
+                                <div className="space-y-2">
+                                  {col.featureGroups.map((group) => (
+                                    <FeatureCardStatic
+                                      key={group.featureId}
+                                      feature={groupToFeature(group)}
+                                    />
+                                  ))}
+                                </div>
                               )}
 
                               {/* Sprint total — shown only when there are stories */}

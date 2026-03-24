@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AlertTriangle, FileText } from 'lucide-react';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
 import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
@@ -16,6 +17,10 @@ type FeatureCardProps = {
   searchTerm?: string;
 };
 
+type DragProps = {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
+};
 
 function getDepBadge(counts: Feature['dependencyCounts']) {
   const total = counts.requires + counts.blocks + counts.conflict;
@@ -100,21 +105,19 @@ function StorySprintDots({
   );
 }
 
-export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
+// ── Shared card body — used by both draggable and static variants ─────────────
+
+function FeatureCardBody({
+  feature,
+  searchTerm,
+  drag,
+}: {
+  feature: Feature;
+  searchTerm?: string;
+  drag?: DragProps;
+}) {
   const { density } = useDispatchStore();
   const [storiesOpen, setStoriesOpen] = useState(false);
-
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id: feature.id,
-      data: { featureId: feature.id },
-    });
-
-  // Transform/transition on the outer wrapper so card + story panel move together.
-  const wrapperStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
 
   const statusPill  = getStatusPillClasses(feature.commitmentStatus);
   const depBadge    = getDepBadge(feature.dependencyCounts);
@@ -123,11 +126,11 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
   const stories     = feature.stories ?? [];
 
   return (
-    <div ref={setNodeRef} style={wrapperStyle}>
+    <>
       {/* ── Feature card ──────────────────────────────────────────────── */}
       <div
-        {...attributes}
-        {...listeners}
+        {...drag?.attributes}
+        {...drag?.listeners}
         className="rounded border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
       >
         {/* Header row: ticket key (left) + source system badge (right).
@@ -268,6 +271,38 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+// ── Draggable variant — requires DndContext + SortableContext ─────────────────
+
+export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({
+      id: feature.id,
+      data: { featureId: feature.id },
+    });
+
+  // Transform/transition on the outer wrapper so card + story panel move together.
+  const wrapperStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={wrapperStyle}>
+      <FeatureCardBody feature={feature} searchTerm={searchTerm} drag={{ attributes, listeners }} />
+    </div>
+  );
+}
+
+// ── Static variant — no DnD context required, used in Team Planning ──────────
+
+export function FeatureCardStatic({ feature, searchTerm }: FeatureCardProps) {
+  return (
+    <div>
+      <FeatureCardBody feature={feature} searchTerm={searchTerm} />
     </div>
   );
 }
