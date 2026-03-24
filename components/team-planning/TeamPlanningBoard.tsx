@@ -10,6 +10,7 @@ import type {
 } from '@/lib/supabase/teamPlanning';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
+import { getStatusPillClasses } from '@/components/ui/StatusPill';
 
 type Props = { initialData: TeamPlanningData };
 
@@ -38,14 +39,6 @@ function StatusDot({ status }: { status: string | null }) {
   );
 }
 
-function getCommitmentPill(commitmentStatus: string | null | undefined) {
-  const s = (commitmentStatus ?? '').toLowerCase();
-  if (s === 'committed')
-    return { label: 'Committed', cls: 'bg-green-100 text-green-700' };
-  if (s === 'planned')
-    return { label: 'Planned', cls: 'bg-blue-100 text-blue-700' };
-  return { label: 'Draft', cls: 'bg-gray-100 text-gray-600' };
-}
 
 // ─── Story row ────────────────────────────────────────────────────────────────
 
@@ -88,7 +81,7 @@ function StoryRow({
 // ─── Feature group (sub-header + stories) ────────────────────────────────────
 
 function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
-  const pill = getCommitmentPill(group.featureCommitmentStatus);
+  const pill = getStatusPillClasses(group.featureCommitmentStatus);
   const isUnassigned = group.featureId === 'unassigned';
 
   return (

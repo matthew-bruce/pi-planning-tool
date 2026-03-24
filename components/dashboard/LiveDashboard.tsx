@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { DashboardData } from '@/lib/types/dashboard';
+import { STATUS_COLOURS } from '@/components/ui/StatusPill';
 
 type Props = { initialData: DashboardData };
 
@@ -275,9 +276,9 @@ export function LiveDashboard({ initialData }: Props) {
           </h2>
           <div className="space-y-2">
             {[
-              ['Draft', data.convergence.draft, 'bg-amber-400'],
-              ['Planned', data.convergence.planned, 'bg-blue-500'],
-              ['Committed', data.convergence.committed, 'bg-green-600'],
+              ['Draft',     data.convergence.draft,      STATUS_COLOURS.draft.bar],
+              ['Planned',   data.convergence.planned,    STATUS_COLOURS.planned.bar],
+              ['Committed', data.convergence.committed,  STATUS_COLOURS.committed.bar],
             ].map(([label, count, color]) => (
               <div key={String(label)}>
                 <div className="mb-1 flex justify-between text-sm">

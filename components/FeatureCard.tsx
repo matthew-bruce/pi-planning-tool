@@ -8,6 +8,7 @@ import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { highlightMatch } from '@/lib/highlightMatch';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
+import { getStatusPillClasses } from '@/components/ui/StatusPill';
 
 type FeatureCardProps = {
   feature: Feature;
@@ -34,12 +35,6 @@ function Highlight({ text, term }: { text: string; term?: string }) {
   );
 }
 
-function getStatusPill(status: string | null | undefined) {
-  const s = (status ?? '').toLowerCase();
-  if (s === 'committed') return { label: 'Committed', cls: 'bg-green-100 text-green-700' };
-  if (s === 'planned')   return { label: 'Planned',   cls: 'bg-blue-100 text-blue-700' };
-  return                        { label: 'Draft',     cls: 'bg-gray-100 text-gray-600' };
-}
 
 function getDepBadge(counts: Feature['dependencyCounts']) {
   const total = counts.requires + counts.blocks + counts.conflict;
@@ -163,7 +158,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
     transition,
   };
 
-  const statusPill  = getStatusPill(feature.commitmentStatus);
+  const statusPill  = getStatusPillClasses(feature.commitmentStatus);
   const depBadge    = getDepBadge(feature.dependencyCounts);
   const sourceBadge = getSourceBadge(feature.sourceSystem);
   const isCompact   = density === 'compact';
