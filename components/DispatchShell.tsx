@@ -137,7 +137,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           {/* Wordmark + subtitle — hidden when collapsed */}
           {!collapsed && (
             <div className="mt-2">
-              <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
+              <h1 className="text-2xl font-semibold text-royalRed">Dispatch</h1>
               <p className="mt-0.5 text-xs text-gray-500">PI Planning orchestration</p>
             </div>
           )}

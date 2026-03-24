@@ -206,7 +206,7 @@ export function LiveDashboard({ initialData }: Props) {
             >
               <p className="text-xs uppercase text-gray-500">{label}</p>
               <p
-                className="mt-2 text-3xl font-bold"
+                className="mt-2 text-3xl font-semibold"
                 style={{ color: colour.value }}
               >
                 {label === 'Convergence %' ? `${value}%` : value}
@@ -228,7 +228,7 @@ export function LiveDashboard({ initialData }: Props) {
             className="rounded-lg border border-gray-200 bg-white p-4"
           >
             <p className="text-xs uppercase text-gray-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
           </article>
         ))}
       </section>
