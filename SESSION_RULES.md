@@ -10,7 +10,8 @@
 1. Read `ARCHITECTURE.md` — current structure, data flow, known debt
 2. Read `TODO.md` — prioritised backlog, current sprint
 3. Read `PROPOSITION.md` — what we're building and why
-4. Confirm: *"Read ARCHITECTURE.md, TODO.md and PROPOSITION.md. Ready to continue from [task]."*
+4. Read `DESIGN_SYSTEM.md` — before touching any UI component
+5. Confirm: *"Read ARCHITECTURE.md, TODO.md, PROPOSITION.md and DESIGN_SYSTEM.md. Ready to continue from [task]."*
 
 ---
 
