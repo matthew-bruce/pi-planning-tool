@@ -21,6 +21,14 @@ Active work — tackle these before anything else.
   - 8 unit tests added covering all resolution branches
   - Branch pending merge to main
 
+- [x] **BUG — stories.team_id and stories.sprint_id null after rebuild**
+  - Root cause: story INSERT only wrote ticket_key/title/status — UUID lookups deferred with a TODO comment
+  - Fix: added `resolveStoryRelationships()` — runs after `resolveValueStreamsAndTeams` so features already have team_id; resolves feature_id + team_id (inherited from feature) + sprint_id (matched by sprint_name)
+  - Fix: added `resolveFeatureSprints()` — backfills features.sprint_id from snapshot sprint_name → sprints.name
+  - Both resolvers log backfill counts to server console; errors propagate
+  - Pure helpers `computeStoryUpdates` + `computeFeatureSprintUpdates` extracted to `importHelpers.ts`
+  - 14 new unit tests added (story resolution: 7, feature sprint resolution: 5 + existing 8 pass)
+
 - [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
   - `AdminControlCentre.tsx`: "Planning Cycles" tab → "Program Increments", "Create New Planning Cycle" → "Create New Program Increment", "Cycle Readiness & Import Health" → "PI Readiness & Import Health", "Active Cycle" → "Active Program Increment", all subtitle/description text

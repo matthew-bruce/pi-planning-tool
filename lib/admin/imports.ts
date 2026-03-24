@@ -1,7 +1,14 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CsvMappedRow, ImportSnapshot } from '@/lib/admin/types';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { buildValueStreamResolutionPlan, ValueStreamSnapshotRow } from '@/lib/admin/importHelpers';
+import {
+  buildValueStreamResolutionPlan,
+  ValueStreamSnapshotRow,
+  computeStoryUpdates,
+  computeFeatureSprintUpdates,
+  StorySnapshotRow,
+  FeatureSnapshotRow,
+} from '@/lib/admin/importHelpers';
 
 export type { ValueStreamSnapshotRow, ValueStreamResolutionPlan } from '@/lib/admin/importHelpers';
 export { buildValueStreamResolutionPlan } from '@/lib/admin/importHelpers';
@@ -241,6 +248,16 @@ export async function rebuildLiveTablesFromSnapshots(planningCycleId: string) {
   const resolveError = await resolveValueStreamsAndTeams(supabase, planningCycleId, snapshotFeatures);
   if (resolveError) return { error: resolveError };
 
+  // ---- Backfill features.sprint_id from snapshot sprint_name ----
+  const featureSprintsError = await resolveFeatureSprints(supabase, planningCycleId, snapshotFeatures);
+  if (featureSprintsError) return { error: featureSprintsError };
+
+  // ---- Backfill stories.feature_id, stories.team_id, stories.sprint_id ----
+  // Must run AFTER resolveValueStreamsAndTeams so that features.team_id is populated
+  // before stories inherit it.
+  const storyResolveError = await resolveStoryRelationships(supabase, planningCycleId, snapshotStories);
+  if (storyResolveError) return { error: storyResolveError };
+
   return { error: null };
 }
 
@@ -369,6 +386,163 @@ async function resolveValueStreamsAndTeams(
         .in('ticket_key', featureKeys);
     }
   }
+
+  return null;
+}
+
+/**
+ * Backfill features.sprint_id by matching snapshot_features.sprint_name
+ * against the sprints table for the same planning cycle.
+ *
+ * Features with no matching sprint (or a null sprint_name) remain with
+ * sprint_id = null — they land in the parking lot.
+ */
+async function resolveFeatureSprints(
+  supabase: SupabaseClient,
+  planningCycleId: string,
+  snapshotFeatures: Record<string, unknown>[],
+): Promise<string | null> {
+  if (!snapshotFeatures.length) return null;
+
+  const { data: sprints, error: sprintErr } = await supabase
+    .from('sprints')
+    .select('id, name')
+    .eq('planning_cycle_id', planningCycleId);
+
+  if (sprintErr) return `resolveFeatureSprints: failed to fetch sprints: ${sprintErr.message}`;
+
+  const sprintIdByName = new Map<string, string>(
+    (sprints ?? []).map((s: Record<string, unknown>) => [s.name as string, s.id as string]),
+  );
+
+  const featureRows: FeatureSnapshotRow[] = snapshotFeatures.map((row) => ({
+    feature_key: row.feature_key as string,
+    sprint_name: (row.sprint_name as string | null) ?? null,
+  }));
+
+  const updates = computeFeatureSprintUpdates(featureRows, sprintIdByName);
+
+  // Group feature ticket_keys by sprint_id for efficient batch updates.
+  const sprintToTicketKeys = new Map<string, string[]>();
+  for (const { ticketKey, sprintId } of updates) {
+    if (!sprintId) continue;
+    const keys = sprintToTicketKeys.get(sprintId) ?? [];
+    keys.push(ticketKey);
+    sprintToTicketKeys.set(sprintId, keys);
+  }
+
+  let backfilledCount = 0;
+  for (const [sprintId, ticketKeys] of sprintToTicketKeys) {
+    const { error } = await supabase
+      .from('features')
+      .update({ sprint_id: sprintId })
+      .eq('planning_cycle_id', planningCycleId)
+      .in('ticket_key', ticketKeys);
+
+    if (error) return `resolveFeatureSprints: update failed: ${error.message}`;
+    backfilledCount += ticketKeys.length;
+  }
+
+  console.log(`Backfilled sprint_id for ${backfilledCount} features`);
+  return null;
+}
+
+/**
+ * Backfill stories.feature_id, stories.team_id and stories.sprint_id after
+ * the initial story INSERT (which inserts only the basic text fields).
+ *
+ * PASS 1 — feature_id + team_id:
+ *   Resolves snapshot_stories.feature_key → live features.ticket_key to get the
+ *   feature UUID. team_id is inherited from the parent feature's team_id.
+ *   Orphan stories (no matching feature) keep feature_id and team_id null — no error.
+ *
+ * PASS 2 — sprint_id:
+ *   Resolves snapshot_stories.sprint_name → sprints.name to get the sprint UUID.
+ *
+ * Must be called AFTER resolveValueStreamsAndTeams so that features.team_id
+ * is already populated before stories inherit it.
+ */
+async function resolveStoryRelationships(
+  supabase: SupabaseClient,
+  planningCycleId: string,
+  snapshotStories: Record<string, unknown>[],
+): Promise<string | null> {
+  if (!snapshotStories.length) return null;
+
+  // Fetch live features (now with team_id populated by resolveValueStreamsAndTeams)
+  const { data: liveFeatures, error: featErr } = await supabase
+    .from('features')
+    .select('id, ticket_key, team_id')
+    .eq('planning_cycle_id', planningCycleId);
+
+  if (featErr) return `resolveStoryRelationships: failed to fetch features: ${featErr.message}`;
+
+  const featuresByTicketKey = new Map<string, { id: string; teamId: string | null }>(
+    (liveFeatures ?? []).map((f: Record<string, unknown>) => [
+      f.ticket_key as string,
+      { id: f.id as string, teamId: (f.team_id as string | null) ?? null },
+    ]),
+  );
+
+  // Fetch sprints for this cycle
+  const { data: sprints, error: sprintErr } = await supabase
+    .from('sprints')
+    .select('id, name')
+    .eq('planning_cycle_id', planningCycleId);
+
+  if (sprintErr) return `resolveStoryRelationships: failed to fetch sprints: ${sprintErr.message}`;
+
+  const sprintIdByName = new Map<string, string>(
+    (sprints ?? []).map((s: Record<string, unknown>) => [s.name as string, s.id as string]),
+  );
+
+  const storyRows: StorySnapshotRow[] = snapshotStories.map((row) => ({
+    story_key: row.story_key as string,
+    feature_key: (row.feature_key as string | null) ?? null,
+    sprint_name: (row.sprint_name as string | null) ?? null,
+  }));
+
+  const updates = computeStoryUpdates(storyRows, featuresByTicketKey, sprintIdByName);
+
+  // Group stories by their (feature_id, team_id, sprint_id) combination for
+  // efficient batch updates — rows with the same values share one UPDATE call.
+  const batchMap = new Map<
+    string,
+    { payload: Record<string, string | null>; ticketKeys: string[] }
+  >();
+
+  for (const { ticketKey, featureId, teamId, sprintId } of updates) {
+    if (!featureId && !teamId && !sprintId) continue; // nothing to update
+
+    const payload: Record<string, string | null> = {};
+    if (featureId) payload.feature_id = featureId;
+    if (teamId) payload.team_id = teamId;
+    if (sprintId) payload.sprint_id = sprintId;
+
+    const batchKey = `${featureId ?? ''}|${teamId ?? ''}|${sprintId ?? ''}`;
+    const existing = batchMap.get(batchKey) ?? { payload, ticketKeys: [] };
+    existing.ticketKeys.push(ticketKey);
+    batchMap.set(batchKey, existing);
+  }
+
+  let teamIdBackfillCount = 0;
+  let sprintIdBackfillCount = 0;
+
+  for (const { payload, ticketKeys } of batchMap.values()) {
+    const { error } = await supabase
+      .from('stories')
+      .update(payload)
+      .eq('planning_cycle_id', planningCycleId)
+      .in('ticket_key', ticketKeys);
+
+    if (error) return `resolveStoryRelationships: update failed: ${error.message}`;
+
+    if (payload.team_id) teamIdBackfillCount += ticketKeys.length;
+    if (payload.sprint_id) sprintIdBackfillCount += ticketKeys.length;
+  }
+
+  console.log(`Backfilled team_id for ${teamIdBackfillCount} stories`);
+  console.log(`Backfilled sprint_id for ${sprintIdBackfillCount} stories`);
 
   return null;
 }
