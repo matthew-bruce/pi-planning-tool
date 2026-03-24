@@ -421,7 +421,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                             {initiative.name}
                           </span>
                         </div>
-                        <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
+                        <span className="text-xs font-medium opacity-85" style={{ color: vsColour.text }}>
                           Teams {initiative.summary.teamsCount} • Features{' '}
                           {initiative.summary.featuresCount} • Dependencies{' '}
                           {initiative.summary.dependencyCount} • Conflicts{' '}
@@ -443,7 +443,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                             : 'grid-template-rows 220ms ease-out',
                         }}
                       >
-                        <div style={{ overflow: 'hidden' }}>
+                        <div className="overflow-hidden">
                           {/*
                             Each team is a block: full-width bar on top, sprint cells below.
                             divide-y on the container adds a hairline between teams.
@@ -478,11 +478,11 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         }}
                                       />
                                       <span className="truncate">
-                                        <span className="font-medium text-gray-800" style={{ fontSize: 13 }}>
+                                        <span className="text-[13px] font-medium text-gray-800">
                                           <Highlight text={team.name} term={search} />
                                         </span>
                                         {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                          <span className="ml-1 font-normal text-gray-400" style={{ fontSize: 11 }}>
+                                          <span className="ml-1 text-[11px] font-normal text-gray-400">
                                             (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
                                           </span>
                                         )}
@@ -503,7 +503,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         : 'grid-template-rows 150ms ease-out',
                                     }}
                                   >
-                                    <div style={{ overflow: 'hidden' }}>
+                                    <div className="overflow-hidden">
                                       <div
                                         className="flex divide-x divide-gray-200 bg-white"
                                         style={{ borderLeft: `3px solid ${vsColour.text}` }}

@@ -36,20 +36,16 @@ function StoryRow({
     <div className="flex items-start gap-1.5 py-1">
       <StatusDot status={story.status} />
       <div className="min-w-0 flex-1">
-        <span
-          className="font-mono shrink-0"
-          style={{ fontSize: 10, color: '#991b1b', opacity: 0.8 }}
-        >
+        <span className="shrink-0 font-mono text-[10px] text-red-800 opacity-80">
           {story.ticketKey}
         </span>{' '}
-        <span className="text-gray-700 leading-snug" style={{ fontSize: 12 }}>
+        <span className="text-xs leading-snug text-gray-700">
           {displayTitle}
         </span>
       </div>
       {story.storyPoints !== null && (
         <span
-          className="shrink-0 rounded bg-gray-100 px-1 text-gray-500 font-medium"
-          style={{ fontSize: 10 }}
+          className="shrink-0 rounded bg-gray-100 px-1 text-[10px] font-medium text-gray-500"
           title={`${story.storyPoints} story points`}
         >
           {story.storyPoints}
@@ -68,29 +64,19 @@ function FeatureGroup({ group }: { group: TeamPlanningFeatureGroup }) {
   return (
     <div className="mb-2">
       {/* Feature sub-header */}
-      <div
-        className="mb-1 rounded px-1.5 py-1"
-        style={{ backgroundColor: '#f3f4f6' }}
-      >
+      <div className="mb-1 rounded bg-gray-100 px-1.5 py-1">
         {!isUnassigned && (
-          <div className="flex items-center justify-between gap-1 min-w-0">
-            <span
-              className="font-mono shrink-0"
-              style={{ fontSize: 9, color: '#991b1b', opacity: 0.75 }}
-            >
+          <div className="flex min-w-0 items-center justify-between gap-1">
+            <span className="shrink-0 font-mono text-[9px] text-red-800 opacity-75">
               {group.featureTicketKey}
             </span>
-            <span
-              className={`shrink-0 rounded-full px-1.5 font-medium ${pill.cls}`}
-              style={{ fontSize: 9 }}
-            >
+            <span className={`shrink-0 rounded-full px-1.5 text-[9px] font-medium ${pill.cls}`}>
               {pill.label}
             </span>
           </div>
         )}
         <div
-          className="truncate font-medium text-gray-700"
-          style={{ fontSize: isUnassigned ? 11 : 11 }}
+          className="truncate text-[11px] font-medium text-gray-700"
           title={group.featureTitle}
         >
           {isUnassigned ? (
@@ -249,11 +235,11 @@ export function TeamPlanningBoard({ initialData }: Props) {
                             transition: 'transform 150ms ease-out',
                           }}
                         />
-                        <span className="font-semibold text-gray-800" style={{ fontSize: 14 }}>
+                        <span className="text-sm font-semibold text-gray-800">
                           {team.name}
                         </span>
                         {team.platform && (
-                          <span className="text-gray-400 font-normal" style={{ fontSize: 12 }}>
+                          <span className="text-xs font-normal text-gray-400">
                             ({team.platform})
                           </span>
                         )}
@@ -275,7 +261,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
                           : 'grid-template-rows 180ms ease-out',
                       }}
                     >
-                      <div style={{ overflow: 'hidden' }}>
+                      <div className="overflow-hidden">
                         {/*
                           flex divide-x mirrors the sticky header above exactly —
                           flex-1 on each column ensures widths align.
@@ -284,8 +270,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
                           {team.sprintColumns.map((col) => (
                             <div
                               key={col.sprintId}
-                              className="flex-1 min-w-0 p-2"
-                              style={{ minHeight: 60 }}
+                              className="min-h-[60px] min-w-0 flex-1 p-2"
                             >
                               {col.featureGroups.length === 0 ? (
                                 <EmptyCell />
@@ -297,10 +282,7 @@ export function TeamPlanningBoard({ initialData }: Props) {
 
                               {/* Sprint total — shown only when there are stories */}
                               {col.totalStories > 0 && (
-                                <div
-                                  className="mt-1 border-t border-gray-100 pt-1 text-right text-gray-400"
-                                  style={{ fontSize: 10 }}
-                                >
+                                <div className="mt-1 border-t border-gray-100 pt-1 text-right text-[10px] text-gray-400">
                                   {col.totalStories}{' '}
                                   {col.totalStories === 1 ? 'story' : 'stories'}
                                   {col.totalPoints > 0 &&

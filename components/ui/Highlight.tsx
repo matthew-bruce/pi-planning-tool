@@ -17,7 +17,6 @@ export function Highlight({ text, term }: Props) {
           <mark
             key={i}
             className="rounded-[2px] bg-royalYellow px-[2px] text-yellow-900"
-            style={{ padding: '0 2px' }}
           >
             {seg.text}
           </mark>

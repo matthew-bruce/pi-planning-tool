@@ -77,14 +77,14 @@ function StorySprintDots({
           const sprintStories = bySprint.get(sprintNum)!;
           return (
             <span key={sprintNum} className="flex items-center gap-0.5">
-              <span className="text-gray-400" style={{ fontSize: 10 }}>
+              <span className="text-[10px] text-gray-400">
                 S{sprintNum}
               </span>
               {sprintStories.length > 6 ? (
                 // Condensed format: ●×N
                 <span className="flex items-center gap-0.5">
                   <StatusDot status={null} size={7} />
-                  <span className="text-gray-500" style={{ fontSize: 10 }}>
+                  <span className="text-[10px] text-gray-500">
                     ×{sprintStories.length}
                   </span>
                 </span>
@@ -148,8 +148,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
 
           {sourceBadge && (
             <span
-              className={`shrink-0 font-medium ${sourceBadge.cls}`}
-              style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4 }}
+              className={`shrink-0 rounded px-[5px] py-[1px] text-[9px] font-medium ${sourceBadge.cls}`}
             >
               {sourceBadge.label}
             </span>
@@ -199,15 +198,14 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
         {/* Story expand toggle — detailed only */}
         {!isCompact && stories.length > 0 && (
           <button
-            className="mt-2 flex w-full items-center gap-1 text-gray-400 hover:text-gray-600"
-            style={{ fontSize: 11 }}
+            className="mt-2 flex w-full items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
             // Stop pointer-down from activating the dnd-kit drag sensor.
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setStoriesOpen((o) => !o)}
           >
             <span
+              className="inline-block"
               style={{
-                display: 'inline-block',
                 transform: storiesOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                 transition: 'transform 150ms ease-out',
               }}
@@ -230,19 +228,17 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
             transition: 'grid-template-rows 150ms ease-out',
           }}
         >
-          <div style={{ overflow: 'hidden' }}>
+          <div className="overflow-hidden">
             <div className="mt-px">
               {stories.map((story) => (
                 <div
                   key={story.id}
-                  className="flex items-center gap-1.5 py-1 pr-1"
-                  style={{ borderLeft: '2px solid #e5e7eb', paddingLeft: 12 }}
+                  className="flex items-center gap-1.5 border-l-2 border-gray-200 py-1 pl-3 pr-1"
                 >
                   {/* Ticket key — muted red, monospace */}
                   <a
                     href="#"
-                    className="shrink-0 font-mono hover:underline"
-                    style={{ fontSize: 10, color: '#991b1b', opacity: 0.75 }}
+                    className="shrink-0 text-[10px] font-mono text-red-800 opacity-75 hover:underline"
                     title="View in source system (coming soon)"
                     onClick={(e) => e.preventDefault()}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -251,7 +247,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                   </a>
 
                   {/* Story title — feature prefix stripped if present */}
-                  <span className="flex-1 truncate text-gray-700" style={{ fontSize: 12 }}>
+                  <span className="flex-1 truncate text-xs text-gray-700">
                     {stripFeaturePrefix(story.title, feature.title)}
                   </span>
 
@@ -259,10 +255,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                   {story.sprintNumber !== null &&
                     story.sprintNumber !== undefined &&
                     story.sprintNumber !== feature.sprintNumber && (
-                      <span
-                        className="shrink-0 rounded px-1 text-gray-500"
-                        style={{ fontSize: 10, backgroundColor: '#f3f4f6' }}
-                      >
+                      <span className="shrink-0 rounded bg-gray-100 px-1 text-[10px] text-gray-500">
                         S{story.sprintNumber}
                       </span>
                     )}
