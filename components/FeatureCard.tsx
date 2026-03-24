@@ -9,6 +9,7 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 import { highlightMatch } from '@/lib/highlightMatch';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
+import { StatusDot } from '@/components/ui/StatusDot';
 
 type FeatureCardProps = {
   feature: Feature;
@@ -62,29 +63,6 @@ function getSourceBadge(
   return { label: sourceSystem.toUpperCase().slice(0, 6), cls: 'bg-gray-100 text-gray-500' };
 }
 
-// Maps story workflow status to a colour.
-function storyStatusColor(status: string | null): string {
-  const s = (status ?? '').toLowerCase();
-  if (s === 'done')        return '#16a34a'; // success green
-  if (s === 'in progress') return '#d97706'; // warning amber
-  if (s === 'blocked')     return '#dc2626'; // danger red
-  return '#9ca3af';                          // neutral gray (To Do / unknown)
-}
-
-function StatusDot({ status, size = 8 }: { status: string | null; size?: number }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: storyStatusColor(status),
-        flexShrink: 0,
-      }}
-    />
-  );
-}
 
 // Story-sprint distribution dots — Detailed mode only.
 // Suppressed when all stories are in the same sprint as the parent feature.

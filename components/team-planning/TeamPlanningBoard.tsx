@@ -11,33 +11,11 @@ import type {
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
+import { StatusDot } from '@/components/ui/StatusDot';
 
 type Props = { initialData: TeamPlanningData };
 
 // ─── Small presentational helpers ────────────────────────────────────────────
-
-function storyStatusColor(status: string | null): string {
-  const s = (status ?? '').toLowerCase();
-  if (s === 'done') return '#16a34a';
-  if (s === 'in progress') return '#d97706';
-  if (s === 'blocked') return '#dc2626';
-  return '#9ca3af';
-}
-
-function StatusDot({ status }: { status: string | null }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 7,
-        height: 7,
-        borderRadius: '50%',
-        backgroundColor: storyStatusColor(status),
-        flexShrink: 0,
-      }}
-    />
-  );
-}
 
 
 // ─── Story row ────────────────────────────────────────────────────────────────
