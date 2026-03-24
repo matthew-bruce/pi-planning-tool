@@ -80,11 +80,10 @@ Platform (independent grouping of teams — no ART affiliation)
 ```
 app/
   admin/              – Admin page + all server actions
-  api/                – API routes (dashboard, sorting-frame, activity)
-  api/                – API routes (dashboard, sorting-frame)
+  api/                – API routes (dashboard, sorting-frame, team-planning, activity)
   dashboard/          – Dashboard page (server component)
   sorting-frame/      – Sorting Frame page (server component)
-  team-planning/      – Team Planning (client-only, Zustand — P1 gap)
+  team-planning/      – Team Planning (server component + Supabase-connected)
   dependencies/       – Dependencies (client-only, Zustand — P1 gap)
   triage/             – Bulk triage (client-only, Zustand — P1 gap)
   activity/           – Standalone Activity Feed page
@@ -96,6 +95,7 @@ components/
   admin/              – AdminControlCentre (large tabbed admin UI)
   dashboard/          – LiveDashboard (Supabase-connected)
   sorting-frame/      – SortingFrameBoard (Supabase-connected)
+  team-planning/      – TeamPlanningBoard (Supabase-connected)
   help/               – HelpLayout, HelpSidebar, HelpArticle, HelpAccordion
   ActivityFeedPanel.tsx – Collapsible right-side activity feed panel
   DispatchShell.tsx   – Root layout shell (nav, sidebar, demo mode)
@@ -121,7 +121,7 @@ lib/
     dashboard.ts      – Dashboard data queries
     server.ts         – Supabase client factory (throws if env vars missing)
     sortingFrame.ts   – Sorting Frame data queries (includes stories)
-    sortingFrame.ts   – Sorting Frame data queries
+    teamPlanning.ts   – Team Planning data queries (stories-first, team → sprint → feature → stories)
   types/
     dashboard.ts      – DashboardData type (canonical source of truth)
   planning/
@@ -512,7 +512,7 @@ Dependency  { id, sourceFeatureId, targetFeatureId,  // resolved UUIDs
 
 | Issue | Severity | Location |
 |---|---|---|
-| Team Planning not Supabase-connected | 🔴 P1 | `app/team-planning/` |
+| Team Planning not Supabase-connected | ✅ Fixed | `app/team-planning/` |
 | Dependencies page not Supabase-connected | 🔴 P1 | `app/dependencies/` |
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
 | ART switching bug on Sorting Frame | 🔴 P1 | `components/sorting-frame/SortingFrameBoard.tsx` |

@@ -3,6 +3,89 @@
  * can be unit-tested without the server client.
  */
 
+// ─── Story relationship resolution ───────────────────────────────────────────
+
+export type StorySnapshotRow = {
+  story_key: string;
+  feature_key: string | null;
+  sprint_name: string | null;
+};
+
+export type FeatureLookupEntry = {
+  id: string;
+  teamId: string | null;
+};
+
+export type StoryUpdateRow = {
+  ticketKey: string;
+  featureId: string | null;
+  teamId: string | null;
+  sprintId: string | null;
+};
+
+/**
+ * Given snapshot story rows and pre-loaded lookup maps, computes the
+ * feature_id, team_id, and sprint_id that should be written to each live
+ * story row.
+ *
+ * Pure function — no side effects, fully unit-testable.
+ *
+ * team_id is inherited from the parent feature (stories don't carry it
+ * in the CSV). sprint_id is resolved from the sprint_name text field.
+ * Orphan stories (no matching feature) keep featureId and teamId null
+ * without error.
+ */
+export function computeStoryUpdates(
+  snapshotStories: StorySnapshotRow[],
+  featuresByTicketKey: Map<string, FeatureLookupEntry>,
+  sprintIdByName: Map<string, string>,
+): StoryUpdateRow[] {
+  return snapshotStories.map((row) => {
+    const feature =
+      row.feature_key ? featuresByTicketKey.get(row.feature_key) ?? null : null;
+
+    return {
+      ticketKey: row.story_key,
+      featureId: feature?.id ?? null,
+      teamId: feature?.teamId ?? null,
+      sprintId:
+        row.sprint_name ? sprintIdByName.get(row.sprint_name) ?? null : null,
+    };
+  });
+}
+
+// ─── Feature sprint resolution ────────────────────────────────────────────────
+
+export type FeatureSnapshotRow = {
+  feature_key: string;
+  sprint_name: string | null;
+};
+
+export type FeatureSprintUpdateRow = {
+  ticketKey: string;
+  sprintId: string | null;
+};
+
+/**
+ * Given snapshot feature rows and a sprint-name → sprint-id lookup map,
+ * computes the sprint_id that should be written to each live feature row.
+ *
+ * Pure function — no side effects, fully unit-testable.
+ *
+ * Features whose sprint_name doesn't match any known sprint (or is null)
+ * get sprintId = null — they remain in the parking lot.
+ */
+export function computeFeatureSprintUpdates(
+  snapshotFeatures: FeatureSnapshotRow[],
+  sprintIdByName: Map<string, string>,
+): FeatureSprintUpdateRow[] {
+  return snapshotFeatures.map((row) => ({
+    ticketKey: row.feature_key,
+    sprintId:
+      row.sprint_name ? sprintIdByName.get(row.sprint_name) ?? null : null,
+  }));
+}
+
 export type ValueStreamSnapshotRow = {
   feature_key: string;
   initiative_name: string | null;
