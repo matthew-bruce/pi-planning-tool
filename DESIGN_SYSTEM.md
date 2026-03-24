@@ -64,23 +64,25 @@ vs8: '#f5f3ff'  text: '#4c1d95'   — lavender
 
 All shared UI primitives live here. Import from here — never recreate locally.
 
-### PageHeader
+### PageHeader — `components/ui/PageHeader.tsx` ✅ Implemented
 Used on every planning page (Sorting Frame, Team Planning, Dependencies, Dashboard).
 ```tsx
-<PageHeader 
+import { PageHeader } from '@/components/ui/PageHeader';
+
+<PageHeader
   title="Sorting Frame"
   subtitle="Demo PI · 31/12/2025 – 24/03/2026"
   actions={<>filters and controls</>}
 />
 ```
-- Title: text-2xl font-weight 500
-- Subtitle: text-sm text-muted
+- Title: `text-2xl font-semibold text-gray-900`
+- Subtitle: `text-sm text-gray-500`
 - Actions: right-aligned in the same row as the title
 
 ### SectionHeader (Value Stream)
 Full-width coloured header for VS sections on the board.
-- Background: assigned vs colour
-- Text: matching darker vs text colour
+- Background: assigned vs colour (dynamic — stays inline style)
+- Text: matching darker vs text colour (dynamic — stays inline style)
 - Shows: VS name (left), Teams/Features/Dependencies/Conflicts (right)
 - Chevron expand/collapse icon on left of name
 
@@ -90,9 +92,15 @@ Full-width team sub-header that spans all sprint columns.
 - Shows: chevron + team name + platform abbreviation (muted) + feature count (right)
 - Clicking expands/collapses the sprint rows below
 
-### FeatureCard
-Used identically on Sorting Frame AND Team Planning Room.
+### FeatureCard — `components/ui/FeatureCard.tsx` ✅ Implemented
+Two exports. Use `FeatureCard` inside DndContext + SortableContext (Sorting Frame).
+Use `FeatureCardStatic` anywhere without drag-and-drop (Team Planning).
 **Never create a separate card component for another page.**
+
+```tsx
+import { FeatureCard } from '@/components/ui/FeatureCard';
+import { FeatureCardStatic } from '@/components/ui/FeatureCard';
+```
 
 Compact mode:
 - Ticket key (royalRed, hyperlink style) + source system badge (top row, right-aligned)
@@ -104,12 +112,42 @@ Detailed mode (adds):
 - Expandable story list below card
 - Strip parent feature name prefix from story titles
 
-### StatusPill
+Card radius: `rounded` (not `rounded-lg`)
+
+### StatusPill — `components/ui/StatusPill.tsx` ✅ Implemented
 ```tsx
+import { StatusPill, getStatusPillClasses, STATUS_COLOURS } from '@/components/ui/StatusPill';
+
 <StatusPill status="committed" />  // green
-<StatusPill status="planned" />    // blue  
+<StatusPill status="planned" />    // blue
 <StatusPill status="draft" />      // gray
 ```
+- `getStatusPillClasses(raw)` returns `{ label, cls }` for inline use
+- `STATUS_COLOURS` maps status → `{ bar, hex }` for bar chart fills
+
+### StatusDot — `components/ui/StatusDot.tsx` ✅ Implemented
+```tsx
+import { StatusDot } from '@/components/ui/StatusDot';
+
+<StatusDot status="done" size={8} />
+```
+Story workflow status indicator. Semantic colours: success/warning/danger/neutral.
+
+### Highlight — `components/ui/Highlight.tsx` ✅ Implemented
+```tsx
+import { Highlight } from '@/components/ui/Highlight';
+
+<Highlight text={feature.title} term={searchTerm} />
+```
+Highlights matching substrings with `bg-royalYellow text-yellow-900`.
+
+### WarningBanner — `components/ui/WarningBanner.tsx` ✅ Implemented
+```tsx
+import { WarningBanner } from '@/components/ui/WarningBanner';
+
+<WarningBanner>No active Program Increment configured.</WarningBanner>
+```
+Yellow notice panel: `rounded border border-yellow-300 bg-yellow-50 p-4 text-sm`.
 
 ### Badge
 ```tsx
@@ -117,19 +155,30 @@ Detailed mode (adds):
 <Badge variant="stories" count={4} />
 <Badge variant="source" system="ado" />
 ```
+(Not yet extracted — inline in FeatureCard. Extract if needed on a third page.)
 
-### EmptyCell
+### EmptyCell — `components/ui/EmptyCell.tsx` ✅ Implemented
+```tsx
+import { EmptyCell } from '@/components/ui/EmptyCell';
+
+<EmptyCell />
+```
 Ghost state for empty sprint cells.
-- Inbox icon (text-gray-200, 20px)
-- "Empty" text (text-gray-300, 11px)
+- Inbox icon (`text-gray-200`, 20px)
+- "Empty" text (`text-gray-300`, `text-[11px]`)
 - Centred in cell
 
-### SprintHeader
+### SprintHeader — `components/ui/SprintHeader.tsx` ✅ Implemented
+```tsx
+import { SprintHeader } from '@/components/ui/SprintHeader';
+
+<SprintHeader sprints={data.sprints} />
+```
 Sticky header row showing sprint names and dates.
-- Background: #f3f4f6
-- Sprint name: 14px, font-weight 600
-- Date range: 11px, muted
-- Bottom border: 1px solid #e5e7eb
+- Background: `bg-gray-100`
+- Sprint name: `text-sm font-semibold`
+- Date range: `text-[11px]` muted
+- Bottom border: `border-b border-gray-200`
 
 ---
 
@@ -183,6 +232,37 @@ Does NOT contain:
 - Card hover: scale(1.01), 100ms ease
 - Never exceed 250ms
 - Always respect prefers-reduced-motion
+
+---
+
+## Phase 1 Consolidation — What Changed
+
+Completed on branch `claude/consolidate-card-styling-dxewA`. All 13 steps merged to main.
+
+| Change | Result |
+|---|---|
+| `components/ui/` created from scratch | Canonical shared component library |
+| `FeatureCard` moved from `components/` to `components/ui/` | Single source of truth |
+| `FeatureCardStatic` added | Team Planning uses shared card without DnD |
+| `getStatusPillClasses` + `STATUS_COLOURS` extracted | Dashboard convergence bars use same tokens |
+| `StatusDot` extracted | Consistent story status dots everywhere |
+| `Highlight` extracted | Search highlighting uses `bg-royalYellow text-yellow-900` |
+| `WarningBanner` extracted | Consistent warning UI across pages |
+| `SprintHeader` extracted | Identical sticky header on Sorting Frame + Team Planning |
+| `EmptyCell` extracted | Identical empty-cell ghost on Sorting Frame + Team Planning |
+| `PageHeader` extracted | Standard page title on all 6 planning pages |
+| Token adoption: `#EE2722` → `bg-royalRed` / `text-royalRed` | DispatchShell, AdminControlCentre |
+| Token adoption: `#FDDD1C` → `bg-royalYellow` | DispatchShell demo banner, Highlight marks |
+| Token adoption: `#78350f` → `text-yellow-900` | DispatchShell demo banner, Highlight marks |
+| `font-bold` → `font-semibold` | Dashboard, Admin, DispatchShell wordmark |
+| Card radius: `rounded-lg` → `rounded` on FeatureCard | Consistent card radius everywhere |
+| Inline `style={{ fontSize }}` → Tailwind equivalents | Across SortingFrameBoard, TeamPlanningBoard |
+
+**Inline styles that intentionally remain:**
+- `gridTemplateRows: '0fr'/'1fr'` — no Tailwind equivalent for animated grid collapse
+- `vsColour.bg` / `vsColour.text` — dynamic VS palette, must stay runtime values
+- `background: 'linear-gradient(to right, #EE2722, …)'` in DispatchShell — CSS multi-stop gradient; Tailwind classes cannot express arbitrary gradient stops inline
+- `fill={i % 2 === 0 ? '#ffffff' : '#FDDD1C'}` in DispatchShell SVG stripe — SVG `fill` attributes require hex values; Tailwind classes do not apply to SVG presentation attributes
 
 ---
 

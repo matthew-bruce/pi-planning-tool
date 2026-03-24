@@ -92,13 +92,22 @@ app/
   layout.tsx
 
 components/
+  ui/                 – Canonical shared UI primitives (import from here, never recreate)
+    FeatureCard.tsx   – Draggable card (FeatureCard) + static variant (FeatureCardStatic)
+    EmptyCell.tsx     – Ghost placeholder for empty sprint cells
+    Highlight.tsx     – Search term highlighter
+    PageHeader.tsx    – Standard page title/subtitle/actions header
+    SprintHeader.tsx  – Sticky sprint header row
+    StatusDot.tsx     – Story workflow status dot
+    StatusPill.tsx    – Commitment status pill + getStatusPillClasses() + STATUS_COLOURS
+    WarningBanner.tsx – Yellow warning/notice banner
   admin/              – AdminControlCentre (large tabbed admin UI)
   dashboard/          – LiveDashboard (Supabase-connected)
   sorting-frame/      – SortingFrameBoard (Supabase-connected)
+  team-planning/      – TeamPlanningBoard (Supabase-connected)
   help/               – HelpLayout, HelpSidebar, HelpArticle, HelpAccordion
   ActivityFeedPanel.tsx – Collapsible right-side activity feed panel
   DispatchShell.tsx   – Root layout shell (nav, sidebar, demo mode)
-  FeatureCard.tsx     – Draggable feature card (visual-only drag in MVP1)
   SprintColumn.tsx    – Droppable sprint column
   ParkingLotDrawer.tsx – Droppable parking lot side panel
 

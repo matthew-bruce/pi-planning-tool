@@ -310,7 +310,7 @@ export function ActivityFeedPanel() {
         title={isOpen ? 'Collapse activity feed' : 'Open activity feed'}
       >
         {hasUnread && (
-          <div className="absolute" style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#EE2722', top: 8, right: 8 }} />
+          <div className="absolute w-[7px] h-[7px] rounded-full bg-royalRed top-2 right-2" />
         )}
         <span className="select-none text-gray-500"
           style={{ fontSize: 11, fontWeight: 500, writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', letterSpacing: '0.05em' }}
@@ -380,10 +380,9 @@ export function ActivityFeedPanel() {
                     <button
                       key={p.key}
                       onClick={() => { setDatePreset(datePreset === p.key ? '' : p.key); setDateFrom(''); setDateTo(''); }}
-                      className="rounded px-1.5 py-0.5 text-xs transition-colors"
-                      style={datePreset === p.key
-                        ? { backgroundColor: '#EE2722', color: '#ffffff' }
-                        : { backgroundColor: '#f3f4f6', color: '#4b5563' }}
+                      className={`rounded px-1.5 py-0.5 text-xs transition-colors ${
+                        datePreset === p.key ? 'bg-royalRed text-white' : 'bg-gray-100 text-gray-600'
+                      }`}
                     >
                       {p.label}
                     </button>
@@ -453,8 +452,7 @@ export function ActivityFeedPanel() {
               {newCount > 0 && (
                 <button
                   onClick={scrollToTop}
-                  className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-medium shadow"
-                  style={{ backgroundColor: '#EE2722', color: '#ffffff' }}
+                  className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-royalRed px-3 py-1 text-xs font-medium text-white shadow"
                 >
                   ↑ {newCount} new
                 </button>
@@ -502,8 +500,7 @@ export function ActivityFeedPanel() {
             <div className="shrink-0 border-t border-gray-100 px-3 py-2">
               <Link
                 href="/activity"
-                className="text-xs font-medium hover:underline"
-                style={{ color: '#EE2722', fontSize: 12 }}
+                className="text-xs font-medium text-royalRed hover:underline"
                 onClick={() => {
                   setIsOpen(false);
                   localStorage.setItem(STORAGE_KEY, 'false');

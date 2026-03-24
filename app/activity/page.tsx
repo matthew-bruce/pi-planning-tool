@@ -232,10 +232,9 @@ export default function ActivityPage() {
               <button
                 key={p.key}
                 onClick={() => { setDatePreset(datePreset === p.key ? '' : p.key); setDateFrom(''); setDateTo(''); }}
-                className="rounded px-2 py-1 text-sm transition-colors"
-                style={datePreset === p.key
-                  ? { backgroundColor: '#EE2722', color: '#ffffff' }
-                  : { backgroundColor: '#f3f4f6', color: '#4b5563' }}
+                className={`rounded px-2 py-1 text-sm transition-colors ${
+                  datePreset === p.key ? 'bg-royalRed text-white' : 'bg-gray-100 text-gray-600'
+                }`}
               >
                 {p.label}
               </button>
