@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { highlightMatch } from '@/lib/highlightMatch';
 import { formatSprintRange } from '@/lib/utils';
+import { Highlight } from '@/components/ui/Highlight';
 import {
   DndContext,
   DragEndEvent,
@@ -30,25 +30,6 @@ const VS_COLOURS = [
   { bg: '#f5f3ff', text: '#4c1d95' }, // vs8
 ];
 
-function Highlight({ text, term }: { text: string; term?: string }) {
-  const segments = highlightMatch(text, term ?? '');
-  return (
-    <>
-      {segments.map((seg, i) =>
-        seg.highlight ? (
-          <mark
-            key={i}
-            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
-          >
-            {seg.text}
-          </mark>
-        ) : (
-          <span key={i}>{seg.text}</span>
-        )
-      )}
-    </>
-  );
-}
 
 function formatTeamType(teamType: string): string {
   return teamType.charAt(0).toUpperCase() + teamType.slice(1).toLowerCase();

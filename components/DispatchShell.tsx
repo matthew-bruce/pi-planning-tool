@@ -264,20 +264,14 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
       >
         {/* Demo Mode amber banner */}
         {demoMode && showPlanningHeader && (
-          <div
-            className="px-4 py-1.5 text-center text-xs font-semibold"
-            style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
-          >
+          <div className="bg-royalYellow px-4 py-1.5 text-center text-xs font-semibold text-yellow-900">
             Demo Mode — simulated data is active
           </div>
         )}
 
         {/* Planning header — royalRed background */}
         {showPlanningHeader && (
-          <header
-            className="relative flex flex-wrap items-center gap-4 overflow-hidden p-4"
-            style={{ backgroundColor: '#EE2722' }}
-          >
+          <header className="bg-royalRed relative flex flex-wrap items-center gap-4 overflow-hidden p-4">
             {/* Diagonal stripe watermark */}
             <div
               className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden"

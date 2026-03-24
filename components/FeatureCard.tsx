@@ -6,35 +6,15 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
-import { highlightMatch } from '@/lib/highlightMatch';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
 import { getStatusPillClasses } from '@/components/ui/StatusPill';
 import { StatusDot } from '@/components/ui/StatusDot';
+import { Highlight } from '@/components/ui/Highlight';
 
 type FeatureCardProps = {
   feature: Feature;
   searchTerm?: string;
 };
-
-function Highlight({ text, term }: { text: string; term?: string }) {
-  const segments = highlightMatch(text, term ?? '');
-  return (
-    <>
-      {segments.map((seg, i) =>
-        seg.highlight ? (
-          <mark
-            key={i}
-            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
-          >
-            {seg.text}
-          </mark>
-        ) : (
-          <span key={i}>{seg.text}</span>
-        )
-      )}
-    </>
-  );
-}
 
 
 function getDepBadge(counts: Feature['dependencyCounts']) {
