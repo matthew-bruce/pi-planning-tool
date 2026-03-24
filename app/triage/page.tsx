@@ -2,6 +2,7 @@
 
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { WarningBanner } from '@/components/ui/WarningBanner';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function TriagePage() {
   const { initiatives, teams, sprints, features, updateFeatureAllocation } = useDispatchStore();
@@ -10,7 +11,7 @@ export default function TriagePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-3">Bulk Triage</h1>
+      <PageHeader title="Bulk Triage" />
       <div className="mb-4">
         <WarningBanner>
           ⚠ Bulk Triage is not yet connected to live data. Figures shown are for demonstration purposes only.

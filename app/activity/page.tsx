@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -197,11 +198,11 @@ export default function ActivityPage() {
       {/* Page header */}
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="mx-auto max-w-5xl flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Live Activity Feed</h1>
-            {cycleName && <p className="mt-0.5 text-sm text-gray-500">{cycleName}</p>}
-          </div>
-          <span className="ml-1 animate-pulse rounded-full" style={{ width: 8, height: 8, backgroundColor: '#16a34a', display: 'inline-block', flexShrink: 0 }} />
+          <PageHeader
+            title="Live Activity Feed"
+            subtitle={cycleName || undefined}
+          />
+          <span className="ml-1 animate-pulse rounded-full bg-green-600" style={{ width: 8, height: 8, display: 'inline-block', flexShrink: 0 }} />
         </div>
       </header>
 

@@ -13,6 +13,7 @@ import { getStatusPillClasses } from '@/components/ui/StatusPill';
 import { WarningBanner } from '@/components/ui/WarningBanner';
 import { SprintHeader } from '@/components/ui/SprintHeader';
 import { EmptyCell } from '@/components/ui/EmptyCell';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 type Props = { initialData: TeamPlanningData };
@@ -188,20 +189,18 @@ export function TeamPlanningBoard({ initialData }: Props) {
 
   return (
     <div>
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Team Planning Room
-        </h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          {data.cycle.name}
-          {loading ? ' • Loading…' : ''}{' '}
-          <span className="text-xs">
-            {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} –{' '}
-            {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
-          </span>
-        </p>
-      </div>
+      <PageHeader
+        title="Team Planning Room"
+        subtitle={
+          <>
+            {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
+            <span className="text-xs">
+              {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} –{' '}
+              {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
+            </span>
+          </>
+        }
+      />
 
       {/* ── Board ────────────────────────────────────────────────────────── */}
       <div className="min-w-0">

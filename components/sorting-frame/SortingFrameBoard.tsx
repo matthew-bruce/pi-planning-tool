@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { Highlight } from '@/components/ui/Highlight';
 import { WarningBanner } from '@/components/ui/WarningBanner';
 import { SprintHeader } from '@/components/ui/SprintHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   DndContext,
   DragEndEvent,
@@ -259,10 +260,18 @@ export function SortingFrameBoard({ initialData }: Props) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-gray-900">Sorting Frame</h1>
-          <div className="flex shrink-0 items-center gap-2">
+      <PageHeader
+        title="Sorting Frame"
+        subtitle={
+          <>
+            {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
+            <span className="text-xs">
+              {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
+            </span>
+          </>
+        }
+        actions={
+          <>
             <select
               className="rounded border px-2 py-1 text-sm"
               value={platformFilter}
@@ -277,14 +286,12 @@ export function SortingFrameBoard({ initialData }: Props) {
             </select>
 
             <input
-              className="rounded border px-2 py-1 text-sm"
-              style={{ minWidth: 260 }}
+              className="min-w-[260px] rounded border px-2 py-1 text-sm"
               placeholder="Search ticket, title, team or platform"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
 
-            {/* Compact / Detailed density toggle */}
             {(['compact', 'detailed'] as const).map((d) => (
               <button
                 key={d}
@@ -300,7 +307,6 @@ export function SortingFrameBoard({ initialData }: Props) {
               </button>
             ))}
 
-            {/* Expand / Collapse all — only shown when board has content */}
             {filteredInitiatives.length > 0 && (
               <>
                 <button
@@ -321,15 +327,9 @@ export function SortingFrameBoard({ initialData }: Props) {
                 </button>
               </>
             )}
-          </div>
-        </div>
-        <p className="mt-0.5 text-sm text-gray-500">
-          {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
-          <span className="text-xs">
-            {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
-          </span>
-        </p>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex">
         {/*
