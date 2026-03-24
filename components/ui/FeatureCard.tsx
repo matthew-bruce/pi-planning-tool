@@ -128,7 +128,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
       <div
         {...attributes}
         {...listeners}
-        className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
+        className="rounded border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
       >
         {/* Header row: ticket key (left) + source system badge (right).
             Source badge is always visible — both compact and detailed. */}
