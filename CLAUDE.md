@@ -10,8 +10,8 @@ Dispatch is a PI Planning orchestration layer for RMG Technology. It sits on top
 
 It is a working tool, not a prototype. Teams are using it. Treat it accordingly.
 
-**Live URL:** [add your Vercel URL here]
-**Status:** Live (beyond PoC)
+**Live URL:** https://pi-planning-tool.vercel.app \
+**Status:** Live (beyond PoC) \
 **Stack:** React (Vite), [Supabase / localStorage], Vercel
 
 ---
