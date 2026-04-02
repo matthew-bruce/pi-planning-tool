@@ -10,8 +10,8 @@
 | Database | Supabase (Postgres) |
 | State / Demo | Zustand + localStorage |
 | Drag & drop | @dnd-kit/core, @dnd-kit/sortable |
-| Dependency graph | reactflow |
-| Tests | vitest |
+| Dependency graph | reactflow + dagre |
+| Tests | vitest (42 passing) |
 | Deploy | Vercel (auto-deploy on push to main) |
 
 ## Repo & Live URLs
@@ -72,6 +72,7 @@ Platform (independent grouping of teams — no ART affiliation)
 - Teams carry forward into new Program Increments by default if they were in the previous one.
 - ARTs carry forward into new Program Increments by default.
 - Features, Stories, Dependencies and Import Snapshots do NOT carry forward.
+- Stories always belong to a Feature — orphan stories should not exist. team_id and sprint_id on stories are inherited from the parent feature during import rebuild.
 
 ---
 
@@ -80,12 +81,12 @@ Platform (independent grouping of teams — no ART affiliation)
 ```
 app/
   admin/              – Admin page + all server actions
-  api/                – API routes (dashboard, sorting-frame, activity)
+  api/                – API routes (dashboard, sorting-frame, team-planning, activity)
   dashboard/          – Dashboard page (server component)
   sorting-frame/      – Sorting Frame page (server component)
-  team-planning/      – Team Planning (client-only, Zustand — P1 gap)
-  dependencies/       – Dependencies (client-only, Zustand — P1 gap)
-  triage/             – Bulk triage (client-only, Zustand — P1 gap)
+  team-planning/      – Team Planning page (server component → passes initialData to client)
+  dependencies/       – Dependencies page (server component → passes initialData to client)
+  triage/             – Bulk triage (client-only, Zustand — P1 gap remains)
   activity/           – Standalone Activity Feed page
   help/               – Static help page
   globals.css
@@ -95,6 +96,8 @@ components/
   admin/              – AdminControlCentre (large tabbed admin UI)
   dashboard/          – LiveDashboard (Supabase-connected)
   sorting-frame/      – SortingFrameBoard (Supabase-connected)
+  team-planning/      – TeamPlanningBoard (Supabase-connected)
+  dependencies/       – DependenciesGraph (Supabase-connected, reactflow)
   help/               – HelpLayout, HelpSidebar, HelpArticle, HelpAccordion
   ActivityFeedPanel.tsx – Collapsible right-side activity feed panel
   DispatchShell.tsx   – Root layout shell (nav, sidebar, demo mode)
@@ -107,20 +110,25 @@ lib/
     arts.ts
     bootstrap.ts      – Parallel data fetch for admin page
     imports.ts        – Snapshot import, rebuild, rollback
+    importHelpers.ts  – Pure helpers: computeStoryUpdates, computeFeatureSprintUpdates
     initiatives.ts    – ⚠️ To be renamed valueStreams.ts in Phase 2
     planningCycles.ts – ⚠️ To be renamed programIncrements.ts in Phase 2
     platforms.ts
     readiness.ts      – Cycle readiness summaries
     teams.ts
     types.ts          – Admin-layer TypeScript types
+    __tests__/        – vitest unit tests (42 passing)
   models.ts           – Canonical domain types (Zustand/demo layer)
   seedData.ts         – Demo seed data generator
   supabase/
     dashboard.ts      – Dashboard data queries
     server.ts         – Supabase client factory (throws if env vars missing)
     sortingFrame.ts   – Sorting Frame data queries (includes stories)
+    teamPlanning.ts   – Team Planning data queries (stories-first, with parking lot)
+    dependencies.ts   – Dependencies graph data queries
   types/
     dashboard.ts      – DashboardData type (canonical source of truth)
+    dependencies.ts   – DependencyNode, DependencyEdge, DependenciesData types
   planning/
     sprintGeneration.ts   – Auto-generate sprint date ranges from PI config
     sprintMapping.ts      – Map imported sprint names to PI sprints
@@ -146,7 +154,7 @@ data/
 Dispatch currently has two data layers that coexist:
 
 ### 1. Supabase Layer (Production data)
-Used by: Dashboard, Sorting Frame, Admin, Activity Feed
+Used by: Dashboard, Sorting Frame, Team Planning, Dependencies, Admin, Activity Feed
 
 ```
 Page (Server Component)
@@ -154,11 +162,11 @@ Page (Server Component)
     → Supabase (Postgres)
       → typed data returned
         → passed as initialData props to Client Components
-          → Client can re-fetch via API routes on user interaction
+          → Client can re-fetch via API routes on user interaction (ART switching)
 ```
 
 ### 2. Zustand / Demo Layer
-Used by: Team Planning, Dependencies, Triage, demo simulation
+Used by: Triage, demo simulation
 
 ```
 DispatchShell (mounts on all pages)
@@ -168,7 +176,7 @@ DispatchShell (mounts on all pages)
         → simulation ticks every 8–15s when demoMode = true
 ```
 
-> **⚠️ Known gap:** Team Planning, Dependencies and Triage show seed/demo data only. They do not read from Supabase. This is P1 backlog work.
+> **⚠️ Known gap:** Triage shows seed/demo data only. It does not read from Supabase. This is the remaining P1 backlog item.
 
 ---
 
@@ -184,7 +192,7 @@ DispatchShell (mounts on all pages)
 | `arts` | Agile Release Trains. Stores `name` (full), `short_name` (e.g. WAA, OOH, CRM) and `display_order` for custom ordering in header. |
 | `teams` | Delivery teams. Belong to one platform (fixed). Have a `team_type`. No fixed ART. |
 | `team_pi_participation` | Which teams participate in which Program Increments — ⚠️ currently named `team_cycle_participation`, Phase 2 rename pending |
-| `team_art_assignments` | Which ART(s) a team is operating under within a specific PI. |
+| `team_art_assignments` | Which ART(s) a team is operating under within a specific PI. Seeded for Demo PI (29 rows). |
 | `initiatives` | Value Streams — epics/workstreams linked to ART + PI. ⚠️ To be renamed `value_streams` in Phase 2. |
 | `app_settings` | Global app configuration (demo cycle visibility, sync mode, etc.) |
 
@@ -193,8 +201,8 @@ DispatchShell (mounts on all pages)
 | Table | Purpose |
 |---|---|
 | `features` | Live feature records for the active PI. Includes source_system, last_synced_at, sprint_id (null = parking lot). |
-| `stories` | Live story records. `feature_id` now populated — stories linked to parent features. |
-| `dependencies` | Live dependency records |
+| `stories` | Live story records. `feature_id`, `team_id` (inherited from parent feature), `sprint_id` (resolved from sprint name) all populated. |
+| `dependencies` | Live dependency records. `source_feature_id` populated for all 27 demo deps. `target_feature_id` populated for 16 (11 are external entities with no features row). |
 
 ### Import / Snapshot Tables
 
@@ -232,12 +240,21 @@ CSV uploaded → parsed client-side
                     → auto-creates missing teams and adds to team_pi_participation
                     → clears live tables for PI
                     → rebuilds from all status='imported' snapshots
+                    → resolveFeatureSprints() — backfills features.sprint_id from sprint name
+                    → resolveStoryRelationships() — backfills stories.feature_id, team_id, sprint_id
                     → propagates errors — no silent failures
 ```
 
 **Rollback:**
 1. Mark latest `import_snapshots.status = 'rolled_back'`
 2. Trigger rebuild from remaining active snapshots
+
+### Story field inheritance during rebuild
+
+Stories do not carry `team_id` in the CSV — they inherit it from their parent feature.
+`sprint_id` is resolved by matching `snapshot_stories.sprint_name` → `sprints.name` for the PI.
+
+Both fields are populated by `resolveStoryRelationships()` which runs after `resolveValueStreamsAndTeams()` and `resolveFeatureSprints()`, ensuring the parent feature already has `team_id` set before stories inherit it.
 
 ### Data Source Authority Rules
 
@@ -255,13 +272,14 @@ BAU tooling (ADO/Jira) is always the source of truth. Timestamp wins:
 ## Demo Dataset (Gold)
 
 Loaded in Supabase against Demo PI (`cc4d9336-8c6d-448a-80ed-9a4474e2a8a0`):
-- 62 features (+ 8 in parking lot)
-- 211 stories — all linked to parent features via `feature_id`
-- 27 dependencies
+- 62 features (+ 8 in parking lot, sprint_id = null, team_id populated)
+- 211 stories — all linked to parent features via `feature_id`; `team_id` and `sprint_id` populated
+- 27 dependencies — `source_feature_id` all populated; `target_feature_id` populated for 16 (11 are external entities)
 - 18 value streams across WAA and OOH ARTs
 - 29 teams across WEB, APP, EPS, PDA, BIG platforms
 - Source systems varied: WEB = `ado_sync`, OOH/EPS/BIG/APP = `jira_sync`
 - 15 activity events seeded for realistic feed
+- `team_art_assignments`: 29 rows — 9 WAA teams, 20 OOH teams
 
 ---
 
@@ -292,6 +310,21 @@ Does NOT contain: Card view toggle (moved to filter row), Planning Stage pill (f
 - Feature cards: white, pop against VS background
 - Stories expandable under each feature card in Detailed mode
 - Story-sprint dot indicators on cards (S1 ●●● S2 ●●)
+
+### Team Planning Board
+- Stories-first view: Sprint columns + Parking Lot column (last)
+- Team section headers with platform-coloured left border accent
+- Feature sub-headers group stories, coloured by Value Stream (vs1–vs8, alphabetical assignment)
+- Parking Lot column shows features with sprint_id = null per team
+- Collapsible team sections and feature groups
+
+### Dependencies Graph
+- ReactFlow + dagre LR layout (rankSep 180, nodeSep 60)
+- Two node types: `feature` (220×90, ART-coloured border) and `external` (160×50, dashed grey)
+- Edges coloured by criticality: High → royalRed, Medium → warning, Low → neutral
+- ART filter via URL searchParam; "Show all ARTs" clears filter
+- Click any node → 320px right side panel with full dependency context
+- MiniMap hidden below 1024px
 
 ---
 
@@ -395,16 +428,15 @@ providers/jiraProvider.ts    – Jira
 
 | Issue | Severity | Location |
 |---|---|---|
-| Team Planning not Supabase-connected | 🔴 P1 | `app/team-planning/` |
-| Dependencies page not Supabase-connected | 🔴 P1 | `app/dependencies/` |
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
+| `getActiveOrSelectedProgramIncrement` duplicated across 4 fetchers | 🟠 P2 | `lib/supabase/*.ts` — move to `shared.ts` |
 | `planning_cycles` table needs renaming to `program_increments` | 🟠 P2 | DB + all TypeScript |
 | `planning_cycle_id` columns need renaming to `program_increment_id` | 🟠 P2 | DB + all TypeScript |
 | `status` column ambiguous — needs renaming to `workflow_status` | 🟠 P2 | `features`, `stories` |
 | `dependency_*` column prefix redundant | 🟠 P2 | `dependencies`, `snapshot_dependencies` |
 | `initiatives` table needs renaming to `value_streams` | 🟠 P2 | DB + all TypeScript |
-| `getActiveOrSelectedPlanningCycle` duplicated | 🟠 P2 | `lib/supabase/dashboard.ts` + `sortingFrame.ts` |
 | Snapshot rebuild is destructive (no deterministic merge) | 🟠 P2 | `lib/admin/imports.ts` |
 | Demo Mode simulation not fully implemented | 🟠 P2 | `store/useDispatchStore.ts` |
+| Team Planning design consistency approximate, not complete | 🟡 P3 | `components/team-planning/` |
 | Supabase null guards are dead code | 🟡 P3 | `lib/admin/*.ts` |
 | Two `Art` types (models.ts vs admin/types.ts) | 🟡 P3 | `lib/models.ts` |

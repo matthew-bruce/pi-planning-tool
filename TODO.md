@@ -19,9 +19,16 @@ Active work — tackle these before anything else.
   - Fix: proper error propagation added to all three INSERT calls
   - Fix: auto-creation of value streams and teams during rebuild
   - 8 unit tests added covering all resolution branches
-  - Branch pending merge to main
-
-- [ ] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
+- [x] **Import pipeline bug fixed — stories.team_id and sprint_id now populated**
+  - Root cause: story INSERT only wrote ticket_key/title/status — feature_id, team_id, sprint_id left null with "future phase" comment
+  - Fix: `resolveFeatureSprints()` — backfills features.sprint_id from snapshot sprint_name → sprints UUID
+  - Fix: `resolveStoryRelationships()` — backfills stories.feature_id, team_id (inherited from feature), sprint_id
+  - Pure helpers `computeStoryUpdates()` and `computeFeatureSprintUpdates()` in `importHelpers.ts`
+  - 14 new unit tests — 42 passing total
+- [x] **team_art_assignments seeded for Demo PI** — 29 rows, 20 OOH teams / 9 WAA teams, derived from features.art_id
+- [x] **stories.team_id and sprint_id backfilled** on Demo PI via SQL (data fix for existing records)
+- [x] **dependencies.source_feature_id and target_feature_id backfilled** on Demo PI — 27/27 sources linked, 16/27 targets linked (11 correctly null — external entities)
+- [x] **Schema Phase 2** — renames and removals (Claude Code — after Phase 1 is stable)
 - [x] **UI label fixes — "Planning Cycle" → "Program Increment"** — UI-only changes, no DB migration needed
 - [x] Load gold demo dataset — 62 features, 211 stories, 27 dependencies, 18 value streams, 29 teams in Demo PI
 - [x] ART switching bug fixed — removed selectedArtId from first useEffect deps in SortingFrameBoard
@@ -34,7 +41,10 @@ Active work — tackle these before anything else.
 - [x] Stories linked to features via SQL (feature_id populated on all 211 stories)
 - [x] Source systems varied on demo data (WEB=ado_sync, OOH/EPS/BIG/APP=jira_sync)
 - [x] 8 parking lot features added to Demo PI
+- [x] **Team Planning Room — connected to Supabase** (stories-first, server component pattern, ART switching, Parking Lot column, Sorting Frame design alignment)
+- [x] **Dependencies Near You — connected to Supabase** (reactflow graph, 27 real deps, 11 external nodes, dagre LR layout, ART filter, node click side panel)
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
+- [ ] Team Planning Room — design consistency pass (visual alignment with Sorting Frame is approximate, not complete — deferred)
 - [ ] UI batch 2 fixes — in progress via Claude Code
 
 ---
@@ -54,8 +64,8 @@ Active work — tackle these before anything else.
 - [x] Admin Control Centre — Program Increments (with editable sprint preview), Platforms, ARTs (with drag/drop ordering), Teams, Value Streams, Import/Sync
 - [x] Sprint generation utilities with DEMO/TEST sandbox fix and year-reset logic
 - [x] vitest unit tests for planning utilities, highlight match, strip feature prefix
-- [x] Dependencies page — reactflow graph (Zustand/demo data — P1 gap remains)
-- [x] Team Planning page (Zustand/demo data — P1 gap remains)
+- [x] Team Planning Room — Supabase-connected, stories-first, Parking Lot column, platform accent borders, VS colour tints on feature sub-headers
+- [x] Dependencies Near You — Supabase-connected, reactflow graph, dagre layout, ART filter, external nodes, criticality-coloured edges, click-to-panel
 - [x] Bulk Triage page (Zustand/demo data — P1 gap remains)
 - [x] Help Centre — searchable, collapsible sections, sidebar navigation
 - [x] `PROPOSITION.md`, `ARCHITECTURE.md`, `TODO.md`, `DEVELOPER_SETUP.md`, `SESSION_RULES.md` written and committed
@@ -67,24 +77,13 @@ Active work — tackle these before anything else.
 
 ## 🔴 P1 — Supabase Integration Gaps
 
-- [ ] **Connect Team Planning to Supabase**
-  - Create `lib/supabase/teamPlanning.ts` data fetcher
-  - Query: teams, features, stories, sprints for active PI + selected ART
-  - Convert `app/team-planning/page.tsx` to server component
-  - Pass `initialData` to client board (same pattern as Sorting Frame)
-  - Team-centric view: stories are the primary unit, features provide context
-
-- [ ] **Connect Dependencies to Supabase**
-  - Fetch real dependency data from `dependencies` table
-  - Fetch features and teams for active PI
-  - Wire reactflow nodes/edges to live data
-  - Retain ART and platform filters
-  - Node click → side drawer with dependency details
-  - Gold dataset has 27 real dependencies — will look impressive
+- [x] ~~Connect Team Planning to Supabase~~ ✅ Done
+- [x] ~~Connect Dependencies to Supabase~~ ✅ Done
 
 - [ ] **Connect Triage to Supabase**
   - Fetch unallocated features (`sprint_id IS NULL`) for active PI
-  - Add server action for sprint assignment write-back to `features` table
+  - Note: in MVP1 this is read-only — show features that need allocating, no write-back yet
+  - Follow same server component pattern as Sorting Frame / Team Planning / Dependencies
 
 ---
 
@@ -137,8 +136,13 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 
 ### Other P2 items
 
+- [ ] **Import pipeline — propagate team_id and sprint_id to stories (already fixed for new imports)**
+  - `resolveFeatureSprints()` and `resolveStoryRelationships()` now run during rebuild ✅
+  - Demo PI data was manually backfilled via SQL ✅
+  - Watch for regression: any future import rollback + rebuild should re-populate correctly
+
 - [ ] **Extract shared `getActiveOrSelectedProgramIncrement`**
-  - Duplicated in `lib/supabase/dashboard.ts` and `lib/supabase/sortingFrame.ts`
+  - Duplicated across `lib/supabase/dashboard.ts`, `lib/supabase/sortingFrame.ts`, `lib/supabase/teamPlanning.ts`, `lib/supabase/dependencies.ts`
   - Move to `lib/supabase/shared.ts`
 
 - [ ] **Program Increment carry-forward on creation**
@@ -146,7 +150,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - Facilitator reviews and adjusts before confirming
 
 - [ ] **Sprint numbering — sandbox DEMO/TEST and year-reset**
-  - DEMO — and TEST — cycles always start from Sprint 1 ✅ (in progress)
+  - DEMO — and TEST — cycles always start from Sprint 1 ✅
   - Sprint numbering resets to Sprint 1 at start of each financial year (Apr 1 for RMG)
   - Show starting sprint number in preview — allow override
 
@@ -167,6 +171,21 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 ---
 
 ## 🔵 P3 — Features & UX
+
+- [ ] **Team Planning Room — design consistency pass**
+  - Visual alignment with Sorting Frame is approximate, not pixel-perfect
+  - Deferred — functional first, polish later
+
+- [ ] **Team Planning Room — Sprint Goals**
+  - Import/sync Sprint Goals per team per sprint (CSV field; future ADO/Jira sync)
+  - Schema decision needed: `sprint_goals` table (sprint_id, team_id, planning_cycle_id, goal_text) or ART-wide goals on `sprints`
+  - Product decision needed: are goals per-team or per-ART/sprint?
+  - UI: display goal text in sprint column header on Team Planning Board, below sprint name/date range — subtle, read-only in MVP
+  - Help Centre: add to Team Planning Room article when built
+
+- [ ] **Team Planning Room — global unassigned features section**
+  - Features with team_id = null, visible to all teams in the room
+  - Demo data currently has zero such features — build when relevant
 
 - [ ] **Activity feed — event type review**
   - Audit all event types currently in activity_events
@@ -310,6 +329,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 |---|---|---|
 | Sprint generation utilities | ✅ Done | `lib/planning/__tests__/` |
 | Import rebuild — value stream/team resolution | ✅ Done | 8 unit tests |
+| Import rebuild — story/feature sprint+team resolution | ✅ Done | 14 unit tests — 42 total |
 | Search highlight match | ✅ Done | `lib/__tests__/highlightMatch.test.ts` |
 | Strip feature prefix | ✅ Done | `lib/__tests__/stripFeaturePrefix.test.ts` |
 | Merge strategy logic | ⬜ Not yet | Write when upsert strategy is built |
@@ -332,8 +352,8 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Features & Stories | ✅ Done | |
 | Dependencies | ✅ Done | Includes all 8 types |
 | Sorting Frame | ⬜ Needs update | Sticky header, VS colours, story expansion |
-| Team Planning Room | ⬜ Not yet | Update when P1 complete |
-| Dependencies Near You | ⬜ Not yet | Update when P1 complete |
+| Team Planning Room | ⬜ Needs article | Stories-first view, Parking Lot, ART switching |
+| Dependencies Near You | ⬜ Needs article | Reactflow graph, external nodes, ART filter, click panel |
 | Live Tracking Dashboard | ⬜ Needs update | Colour-coded KPIs |
 | Admin Control Centre | ⬜ Needs update | ART ordering, Value Streams tab |
 | Data Import | ✅ Done | Merge rules, in-situ guidance |
