@@ -3,6 +3,7 @@ export type DependencyNode = {
   ticketKey: string;
   title: string;
   teamName: string | null;
+  artShortName: string | null;
   isExternal: boolean;
 };
 
@@ -15,6 +16,7 @@ export type DependencyEdge = {
   status: string | null;
   owner: string | null;
   description: string | null;
+  targetSprint: string | null;
 };
 
 export type DependenciesData = {

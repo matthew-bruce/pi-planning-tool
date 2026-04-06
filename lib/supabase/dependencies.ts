@@ -20,6 +20,7 @@ type DbDependency = {
   dependency_status: string | null;
   dependency_owner: string | null;
   dependency_description: string | null;
+  dependency_target_sprint: string | null;
 };
 
 type DbFeature = {
@@ -45,19 +46,19 @@ export async function getDependenciesData(input: {
   selectedArtId?: string;
 }): Promise<DependenciesData> {
   const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
-  const arts = (await getArts()).map((art) => ({
+  const allArts = (await getArts()).map((art) => ({
     id: art.id,
     name: art.name,
     short_name: art.short_name,
   }));
 
   const selectedArtId =
-    input.selectedArtId && arts.some((art) => art.id === input.selectedArtId)
+    input.selectedArtId && allArts.some((art) => art.id === input.selectedArtId)
       ? input.selectedArtId
-      : arts[0]?.id ?? null;
+      : allArts[0]?.id ?? null;
 
   if (!cycle || !selectedArtId) {
-    return { cycle: cycle ? { id: cycle.id, name: cycle.name } : null, arts, selectedArtId, nodes: [], edges: [] };
+    return { cycle: cycle ? { id: cycle.id, name: cycle.name } : null, arts: allArts, selectedArtId, nodes: [], edges: [] };
   }
 
   const supabase = getSupabaseServerClient();
@@ -71,7 +72,7 @@ export async function getDependenciesData(input: {
     supabase
       .from('dependencies')
       .select(
-        'id,source_feature_id,target_feature_id,source_ticket_key,target_ticket_key,dependency_type,dependency_criticality,dependency_status,dependency_owner,dependency_description'
+        'id,source_feature_id,target_feature_id,source_ticket_key,target_ticket_key,dependency_type,dependency_criticality,dependency_status,dependency_owner,dependency_description,dependency_target_sprint'
       )
       .eq('planning_cycle_id', cycle.id),
     supabase
@@ -89,6 +90,19 @@ export async function getDependenciesData(input: {
   const featureRows = (features ?? []) as DbFeature[];
   const teamRows = (teams ?? []) as DbTeam[];
   const depRows = (dependencies ?? []) as DbDependency[];
+
+  // Build ART lookup: initiative_id → art short_name
+  const artShortNameById = new Map(allArts.map((a) => [a.id, a.short_name]));
+  const initiativeArtMap = new Map(
+    initiativeRows.map((i) => [i.id, i.art_id])
+  );
+
+  function getArtShortName(initiativeId: string | null): string | null {
+    if (!initiativeId) return null;
+    const artId = initiativeArtMap.get(initiativeId);
+    if (!artId) return null;
+    return artShortNameById.get(artId) ?? null;
+  }
 
   // Scope to selected ART
   const artInitiativeIds = new Set(
@@ -124,6 +138,7 @@ export async function getDependenciesData(input: {
             ticketKey: feat.ticket_key,
             title: feat.title,
             teamName: feat.team_id ? (teamNameById.get(feat.team_id) ?? null) : null,
+            artShortName: getArtShortName(feat.initiative_id),
             isExternal: false,
           });
         }
@@ -140,6 +155,7 @@ export async function getDependenciesData(input: {
             ticketKey: feat.ticket_key,
             title: feat.title,
             teamName: feat.team_id ? (teamNameById.get(feat.team_id) ?? null) : null,
+            artShortName: getArtShortName(feat.initiative_id),
             isExternal: false,
           });
         }
@@ -153,6 +169,7 @@ export async function getDependenciesData(input: {
           ticketKey: dep.target_ticket_key,
           title: dep.dependency_type ?? dep.target_ticket_key,
           teamName: null,
+          artShortName: null,
           isExternal: true,
         });
       }
@@ -179,13 +196,14 @@ export async function getDependenciesData(input: {
         status: dep.dependency_status,
         owner: dep.dependency_owner,
         description: dep.dependency_description,
+        targetSprint: dep.dependency_target_sprint,
       };
     })
     .filter((e): e is DependencyEdge => e !== null);
 
   return {
     cycle: { id: cycle.id, name: cycle.name },
-    arts,
+    arts: allArts,
     selectedArtId,
     nodes: [...nodeMap.values()],
     edges,
