@@ -100,9 +100,6 @@ export function DependenciesGraph({ initialData }: Props) {
     [graphEdges],
   );
 
-  // Debug: log edge count before render
-  console.log('[DependenciesGraph] edges:', edges.length, 'nodes:', nodes.length);
-
   const selectedNode = graphNodes.find((n) => n.id === selectedNodeId);
   const selectedEdges = graphEdges.filter(
     (e) => e.sourceId === selectedNodeId || e.targetId === selectedNodeId
