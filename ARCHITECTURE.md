@@ -11,7 +11,7 @@
 | State / Demo | Zustand + localStorage |
 | Drag & drop | @dnd-kit/core, @dnd-kit/sortable |
 | Dependency graph | reactflow + dagre |
-| Tests | vitest (42 passing) |
+| Tests | vitest (53 passing) |
 | Deploy | Vercel (auto-deploy on push to main) |
 
 ## Repo & Live URLs
@@ -186,7 +186,7 @@ DispatchShell (mounts on all pages)
 
 | Table | Purpose |
 |---|---|
-| `program_increments` | PI definitions (name, dates, sprint count, sprint length, active flag, current stage) — ⚠️ currently named `planning_cycles`, Phase 2 rename pending |
+| `program_increments` | PI definitions (name, dates, sprint count, sprint length, active flag, `current_stage` SMALLINT 1..6 nullable — the facilitator-set Planning Stage) — ⚠️ currently named `planning_cycles`, Phase 2 rename pending |
 | `sprints` | Sprint schedule per PI. Sprint numbering is **continuous across PIs** (PI1 = Sprint 1–6, PI2 = Sprint 7–13, etc.) |
 | `platforms` | Platform groupings (WEB, APP, EPS, PDA, BIG, ETP). No ART affiliation — platforms are independent. |
 | `arts` | Agile Release Trains. Stores `name` (full), `short_name` (e.g. WAA, OOH, CRM) and `display_order` for custom ordering in header. |
@@ -286,8 +286,38 @@ Loaded in Supabase against Demo PI (`cc4d9336-8c6d-448a-80ed-9a4474e2a8a0`):
 ## UI Architecture
 
 ### Planning Header (red bar, all planning pages)
-Contains: Royal Mail logo area (sidebar), ART selector buttons, Demo chip.
-Does NOT contain: Card view toggle (moved to filter row), Planning Stage pill (future).
+Contains: Royal Mail logo area (sidebar), ART selector buttons, **Planning Stage pill**, Demo chip.
+Does NOT contain: Card view toggle (moved to filter row).
+
+### Planning Stage
+The facilitator sets the current stage from a pill in the planning header on
+every planning page. Six fixed, ordered stages are defined in
+`lib/planning/stages.ts` (single source of truth). The pill
+(`components/planning/PlanningStagePill.tsx`) is one component, one behaviour
+for everyone in MVP1 — no separate facilitator affordance. It matches the
+ART selector button style (rounded, white on translucent white), opens a
+menu with all 6 stages, supports keyboard navigation (Tab/Enter/Arrow/Escape),
+and does an optimistic UI update with inline error rollback.
+
+Selecting a stage calls the `setProgramIncrementStage` server action in
+`app/admin/actions.ts`. The action writes `planning_cycles.current_stage`
+(`planning_cycles` → `program_increments` in Phase 2) and emits a
+`stage_changed` row into `activity_events` with `{ from_stage, to_stage,
+stage_name }` in the `metadata` jsonb column. There is **no separate stage
+history table** — the activity feed is the temporal record of stage
+transitions.
+
+The server action is reversal-aware. If the facilitator changes stage twice
+within 60 seconds, the earlier `stage_changed` row is deleted. If the new
+stage equals the `from_stage` of the deleted row, no replacement is inserted
+(net effect: nothing happened). Any other follow-up is treated as a
+correction and a fresh row is inserted. The stage column itself is always
+updated — the activity emission is best-effort.
+
+`current_stage` is fetched once per request in `app/layout.tsx` via the
+shared `getActiveOrSelectedProgramIncrement` helper and passed to
+`DispatchShell` as props. This avoids threading it through every page's
+server component.
 
 ### Left Sidebar
 - Collapsible/expandable — state persisted to localStorage
@@ -429,7 +459,6 @@ providers/jiraProvider.ts    – Jira
 | Issue | Severity | Location |
 |---|---|---|
 | Triage page not Supabase-connected | 🔴 P1 | `app/triage/` |
-| `getActiveOrSelectedProgramIncrement` duplicated across 4 fetchers | 🟠 P2 | `lib/supabase/*.ts` — move to `shared.ts` |
 | `planning_cycles` table needs renaming to `program_increments` | 🟠 P2 | DB + all TypeScript |
 | `planning_cycle_id` columns need renaming to `program_increment_id` | 🟠 P2 | DB + all TypeScript |
 | `status` column ambiguous — needs renaming to `workflow_status` | 🟠 P2 | `features`, `stories` |

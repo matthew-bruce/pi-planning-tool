@@ -131,6 +131,35 @@ Sticky header row showing sprint names and dates.
 - Date range: 11px, muted
 - Bottom border: 1px solid #e5e7eb
 
+### PlanningStagePill
+Single facilitator-set indicator for the current Planning Stage. Lives in
+the planning header on every planning page — wired once in
+`components/DispatchShell.tsx`, appears automatically wherever
+`showPlanningHeader` is true.
+
+- Visual: rounded pill, white text on translucent white background, matches
+  the ART selector button style exactly
+- Content: "Stage {n}: {shortLabel}" — e.g. "Stage 2: Draft Plan"
+- Empty state: "Set planning stage" with a dashed white border
+- Click opens a dropdown listing all 6 stages (full name) with a ✓ next to
+  the current one
+- Selection calls `setProgramIncrementStage` server action with optimistic
+  UI update and inline rollback on error
+- Keyboard accessible: Tab to focus, Enter/Space to open, Arrow keys to
+  navigate, Enter to select, Escape to close
+- ARIA: `aria-haspopup="menu"`, `aria-expanded`, `role="menu"`,
+  `role="menuitem"`
+
+```tsx
+<PlanningStagePill
+  cycleId={cycle?.id ?? null}
+  currentStage={cycle?.current_stage ?? null}
+/>
+```
+
+Stage definitions are the single source of truth in `lib/planning/stages.ts`
+— never hardcode stage names or IDs elsewhere.
+
 ---
 
 ## Page Layout Pattern

@@ -141,9 +141,10 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - Demo PI data was manually backfilled via SQL ✅
   - Watch for regression: any future import rollback + rebuild should re-populate correctly
 
-- [ ] **Extract shared `getActiveOrSelectedProgramIncrement`**
-  - Duplicated across `lib/supabase/dashboard.ts`, `lib/supabase/sortingFrame.ts`, `lib/supabase/teamPlanning.ts`, `lib/supabase/dependencies.ts`
-  - Move to `lib/supabase/shared.ts`
+- [x] **Extract shared `getActiveOrSelectedProgramIncrement`**
+  - Moved to `lib/supabase/shared.ts`, returns `current_stage`
+  - Re-exported from `lib/supabase/dashboard.ts` and `lib/supabase/sortingFrame.ts` for back-compat
+  - `teamPlanning.ts` and `app/api/activity/route.ts` import directly from `shared.ts`
 
 - [ ] **Program Increment carry-forward on creation**
   - When creating a new PI, automatically copy participating teams and ARTs from previous PI
@@ -241,11 +242,20 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - OFF default: DEMO — and TEST — hidden from cycle pickers
   - Stored in app_settings table
 
-- [ ] **Planning Stage indicator — live app**
-  - Facilitator control in planning header
-  - 6 stages, freely changeable, no workflow gates
-  - Contextual health feedback on Dashboard
-  - Stored on program_increments.current_stage
+- [x] **Planning Stage indicator — live app**
+  - Facilitator-set pill in the planning header (`components/planning/PlanningStagePill.tsx`)
+  - 6 fixed stages in `lib/planning/stages.ts`, freely changeable, no workflow gates
+  - Stored on `planning_cycles.current_stage` (SMALLINT nullable, 1..6)
+  - Stage changes emit `stage_changed` activity_events rows with reversal-aware 60s debounce
+  - Prerequisite for the Live Tracking Dashboard redesign (DASHBOARD_SPEC.md)
+
+- [ ] **Breadcrumb — stage history table was considered and rejected.**
+  Stage changes are recorded via `activity_events` rows with `event_type`
+  `'stage_changed'`. A separate history/audit table was considered but
+  rejected as over-engineering — the activity feed already provides a
+  timestamped, filterable, user-visible record of room events, and nothing
+  in MVP1 needs a structured stage-transition query. If a future feature
+  needs one, reconsider at that point.
 
 - [ ] **Planning Stage — contextual app behaviour (future phase)**
   - Sorting Frame, Dashboard, Dependencies all adapt per stage
@@ -333,6 +343,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Search highlight match | ✅ Done | `lib/__tests__/highlightMatch.test.ts` |
 | Strip feature prefix | ✅ Done | `lib/__tests__/stripFeaturePrefix.test.ts` |
 | Merge strategy logic | ⬜ Not yet | Write when upsert strategy is built |
+| `setProgramIncrementStage` server action | ⬜ Not yet | Integration-flavoured — needs Supabase mock. Cover normal insert, 60-second reversal (no insert), 60-second correction (replace insert) |
 | Sorting Frame data fetcher | ⬜ Not yet | Integration test |
 | Import pipeline | ⬜ Not yet | Known CSV → expected live table output |
 | Dashboard data queries | ⬜ Not yet | |
@@ -361,4 +372,5 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Demo Mode | ⬜ Needs update | New sidebar location, defaults |
 | Activity Feed | ⬜ Not yet | New feature — needs article |
 | Value Streams | ⬜ Not yet | Renamed from Initiatives |
+| Planning Stage | ⬜ Needs article | New feature — pill + 6 stages, stub in `data/helpContent.ts` |
 | FAQ | ✅ Done | |
