@@ -6,7 +6,7 @@ export type DashboardData = {
     end_date: string;
     is_active: boolean;
     is_archived: boolean;
-    current_stage: number;
+    current_stage: number | null;
   } | null;
   arts: Array<{ id: string; name: string; short_name: string | null }>;
   selectedArtId: string | null;

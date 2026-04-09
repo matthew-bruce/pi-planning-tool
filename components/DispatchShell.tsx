@@ -20,6 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { PlanningStagePill } from '@/components/planning/PlanningStagePill';
 
 const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 52;
@@ -36,7 +37,19 @@ const planningNavItems: NavItem[] = [
   { href: '/help',           label: 'Help',                icon: HelpCircle  },
 ];
 
-export function DispatchShell({ children }: { children: React.ReactNode }) {
+type DispatchShellProps = {
+  children: React.ReactNode;
+  /** Active Program Increment id, resolved server-side in app/layout.tsx. */
+  cycleId?: string | null;
+  /** current_stage for the active Program Increment — drives the stage pill. */
+  currentStage?: number | null;
+};
+
+export function DispatchShell({
+  children,
+  cycleId = null,
+  currentStage = null,
+}: DispatchShellProps) {
   const pathname = usePathname();
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const isHelp  = pathname === '/help'  || pathname.startsWith('/help/');
@@ -340,6 +353,9 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                   </button>
                 ))}
               </div>
+
+              {/* Planning Stage pill — ambient context on every planning page */}
+              <PlanningStagePill cycleId={cycleId} currentStage={currentStage} />
 
               {/* Sync mode pill — right-aligned */}
               <div className="ml-auto">

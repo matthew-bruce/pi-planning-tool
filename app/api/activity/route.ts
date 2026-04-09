@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { getActiveOrSelectedPlanningCycle } from '@/lib/supabase/sortingFrame';
+import { getActiveOrSelectedProgramIncrement } from '@/lib/supabase/shared';
 
 type RawEvent = {
   id: string;
@@ -21,7 +21,7 @@ type RawTeam = {
 export async function GET(request: NextRequest) {
   const cycleId = request.nextUrl.searchParams.get('cycleId') ?? undefined;
 
-  const cycle = await getActiveOrSelectedPlanningCycle(cycleId);
+  const cycle = await getActiveOrSelectedProgramIncrement(cycleId);
   if (!cycle) {
     return NextResponse.json({
       cycleId: null,
