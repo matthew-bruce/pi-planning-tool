@@ -46,6 +46,7 @@ Active work — tackle these before anything else.
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 - [ ] Team Planning Room — design consistency pass (visual alignment with Sorting Frame is approximate, not complete — deferred)
 - [ ] UI batch 2 fixes — in progress via Claude Code
+- [x] **Design system Phase 1 consolidation** — `components/ui/` library created (FeatureCard, FeatureCardStatic, StatusPill, StatusDot, Highlight, WarningBanner, SprintHeader, EmptyCell, PageHeader), token adoption, TeamPlanningBoard full FeatureCard parity. See DESIGN_SYSTEM.md for full change log.
 
 ---
 
@@ -254,6 +255,15 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 ---
 
 ## 🟢 P4 — Future / Post-PoC
+
+### Design System Phase 2 (when needed)
+
+- [ ] **Extract `Badge` component** — dependency badge, story count badge, source system badge are all inline in FeatureCard. Extract to `components/ui/Badge.tsx` if a third consumer appears.
+- [ ] **Extract `SectionHeader`** — VS section header in SortingFrameBoard. Extract to `components/ui/SectionHeader.tsx` if Team Planning or another board needs it.
+- [ ] **Extract `SwimLaneRow`** — team sub-header in SortingFrameBoard. Extract if reused.
+- [ ] **FeatureCard story points** — `TeamPlanningStory.storyPoints` not yet surfaced on cards (the Team Planning story model has it, FeatureStory in models.ts does not). Add `storyPoints?: number | null` to FeatureStory if needed.
+
+### Provider & Platform
 
 - [ ] Azure DevOps provider (`providers/adoProvider.ts`)
 - [ ] Jira provider (`providers/jiraProvider.ts`)

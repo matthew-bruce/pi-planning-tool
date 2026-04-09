@@ -277,7 +277,7 @@ export function AdminControlCentre(props: {
         className="rounded border p-4"
         style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca', borderBottomWidth: 1 }}
       >
-        <h2 className="text-2xl font-bold text-gray-900">Dispatch Admin Control Centre</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">Dispatch Admin Control Centre</h2>
         <p className="text-sm text-gray-600 mt-1">Configure Program Increments, teams, initiatives and import planning data</p>
       </div>
 

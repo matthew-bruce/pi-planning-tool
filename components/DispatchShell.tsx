@@ -137,7 +137,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           {/* Wordmark + subtitle — hidden when collapsed */}
           {!collapsed && (
             <div className="mt-2">
-              <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
+              <h1 className="text-2xl font-semibold text-royalRed">Dispatch</h1>
               <p className="mt-0.5 text-xs text-gray-500">PI Planning orchestration</p>
             </div>
           )}
@@ -214,8 +214,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                 role="switch"
                 aria-checked={demoMode}
                 onClick={() => setDemoMode(!demoMode)}
-                className="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none"
-                style={{ backgroundColor: demoMode ? '#FDDD1C' : '#d1d5db' }}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none ${demoMode ? 'bg-royalYellow' : 'bg-gray-300'}`}
               >
                 <span
                   className="pointer-events-none mt-0.5 inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
@@ -264,20 +263,14 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
       >
         {/* Demo Mode amber banner */}
         {demoMode && showPlanningHeader && (
-          <div
-            className="px-4 py-1.5 text-center text-xs font-semibold"
-            style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
-          >
+          <div className="bg-royalYellow px-4 py-1.5 text-center text-xs font-semibold text-yellow-900">
             Demo Mode — simulated data is active
           </div>
         )}
 
         {/* Planning header — royalRed background */}
         {showPlanningHeader && (
-          <header
-            className="relative flex flex-wrap items-center gap-4 overflow-hidden p-4"
-            style={{ backgroundColor: '#EE2722' }}
-          >
+          <header className="bg-royalRed relative flex flex-wrap items-center gap-4 overflow-hidden p-4">
             {/* Diagonal stripe watermark */}
             <div
               className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden"
@@ -320,12 +313,12 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                   <button
                     key={art.id}
                     onClick={() => setSelectedArtId(art.id)}
-                    className="rounded-full border px-3 py-1 text-sm"
-                    style={
+                    className={`rounded-full border px-3 py-1 text-sm ${
                       selectedArtId === art.id
-                        ? { backgroundColor: '#ffffff', color: '#EE2722', borderColor: '#ffffff', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
-                        : { backgroundColor: 'transparent', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
-                    }
+                        ? 'bg-white text-royalRed border-white'
+                        : 'bg-transparent text-white border-white/25'
+                    }`}
+                    style={{ transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }}
                   >
                     {art.name}
                   </button>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import ReactFlow, { Background, Controls, MiniMap } from 'reactflow';
 import { useDispatchStore } from '@/store/useDispatchStore';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function DependenciesPage() {
   const { selectedArtId, initiatives, teams, features, dependencies } = useDispatchStore();
@@ -36,7 +37,7 @@ export default function DependenciesPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-2xl font-semibold text-gray-900">Dependencies Near You</h1>
+      <PageHeader title="Dependencies Near You" />
     <div className="flex gap-3 h-[calc(100vh-210px)]">
       <div className="flex-1 border rounded">
         <div className="p-2 flex gap-2 border-b">

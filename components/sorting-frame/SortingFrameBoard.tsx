@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { highlightMatch } from '@/lib/highlightMatch';
-import { formatSprintRange } from '@/lib/utils';
+import { Highlight } from '@/components/ui/Highlight';
+import { WarningBanner } from '@/components/ui/WarningBanner';
+import { SprintHeader } from '@/components/ui/SprintHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   DndContext,
   DragEndEvent,
@@ -30,25 +32,6 @@ const VS_COLOURS = [
   { bg: '#f5f3ff', text: '#4c1d95' }, // vs8
 ];
 
-function Highlight({ text, term }: { text: string; term?: string }) {
-  const segments = highlightMatch(text, term ?? '');
-  return (
-    <>
-      {segments.map((seg, i) =>
-        seg.highlight ? (
-          <mark
-            key={i}
-            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
-          >
-            {seg.text}
-          </mark>
-        ) : (
-          <span key={i}>{seg.text}</span>
-        )
-      )}
-    </>
-  );
-}
 
 function formatTeamType(teamType: string): string {
   return teamType.charAt(0).toUpperCase() + teamType.slice(1).toLowerCase();
@@ -265,26 +248,30 @@ export function SortingFrameBoard({ initialData }: Props) {
 
   if (!data.cycle) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No active Program Increment configured.
-      </div>
+      <WarningBanner>No active Program Increment configured.</WarningBanner>
     );
   }
 
   if (!data.sprints.length) {
     return (
-      <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-sm">
-        No sprints configured for {data.cycle.name}.
-      </div>
+      <WarningBanner>No sprints configured for {data.cycle.name}.</WarningBanner>
     );
   }
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-gray-900">Sorting Frame</h1>
-          <div className="flex shrink-0 items-center gap-2">
+      <PageHeader
+        title="Sorting Frame"
+        subtitle={
+          <>
+            {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
+            <span className="text-xs">
+              {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
+            </span>
+          </>
+        }
+        actions={
+          <>
             <select
               className="rounded border px-2 py-1 text-sm"
               value={platformFilter}
@@ -299,14 +286,12 @@ export function SortingFrameBoard({ initialData }: Props) {
             </select>
 
             <input
-              className="rounded border px-2 py-1 text-sm"
-              style={{ minWidth: 260 }}
+              className="min-w-[260px] rounded border px-2 py-1 text-sm"
               placeholder="Search ticket, title, team or platform"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
 
-            {/* Compact / Detailed density toggle */}
             {(['compact', 'detailed'] as const).map((d) => (
               <button
                 key={d}
@@ -322,7 +307,6 @@ export function SortingFrameBoard({ initialData }: Props) {
               </button>
             ))}
 
-            {/* Expand / Collapse all — only shown when board has content */}
             {filteredInitiatives.length > 0 && (
               <>
                 <button
@@ -343,15 +327,9 @@ export function SortingFrameBoard({ initialData }: Props) {
                 </button>
               </>
             )}
-          </div>
-        </div>
-        <p className="mt-0.5 text-sm text-gray-500">
-          {data.cycle.name}{loading ? ' • Loading…' : ''}{' '}
-          <span className="text-xs">
-            {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} – {new Date(data.cycle.end_date).toLocaleDateString('en-GB')}
-          </span>
-        </p>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex">
         {/*
@@ -405,20 +383,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                 px-px on the inner row matches the 1px left+right border on each
                 VS <section>, so all 6 sprint column headers align with the cells below.
               */}
-              <div className="sticky top-0 z-30 mb-2 border-b border-gray-200 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
-                <div className="flex divide-x divide-gray-200 px-px">
-                  {data.sprints.map((sprint) => (
-                    <div key={sprint.id} className="flex-1 min-w-0 px-3 py-2">
-                      <div className="font-semibold text-gray-800" style={{ fontSize: 14 }}>
-                        {sprint.name ?? `Sprint ${sprint.number}`}
-                      </div>
-                      <div className="text-gray-500" style={{ fontSize: 11 }}>
-                        {formatSprintRange(sprint.startDate, sprint.endDate)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <SprintHeader sprints={data.sprints} />
 
               {/* VS sections */}
               <div className="space-y-4">
@@ -456,7 +421,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                             {initiative.name}
                           </span>
                         </div>
-                        <span style={{ color: vsColour.text, opacity: 0.85, fontSize: 12, fontWeight: 500 }}>
+                        <span className="text-xs font-medium opacity-85" style={{ color: vsColour.text }}>
                           Teams {initiative.summary.teamsCount} • Features{' '}
                           {initiative.summary.featuresCount} • Dependencies{' '}
                           {initiative.summary.dependencyCount} • Conflicts{' '}
@@ -478,7 +443,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                             : 'grid-template-rows 220ms ease-out',
                         }}
                       >
-                        <div style={{ overflow: 'hidden' }}>
+                        <div className="overflow-hidden">
                           {/*
                             Each team is a block: full-width bar on top, sprint cells below.
                             divide-y on the container adds a hairline between teams.
@@ -513,11 +478,11 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         }}
                                       />
                                       <span className="truncate">
-                                        <span className="font-medium text-gray-800" style={{ fontSize: 13 }}>
+                                        <span className="text-[13px] font-medium text-gray-800">
                                           <Highlight text={team.name} term={search} />
                                         </span>
                                         {(team.platform ?? (team.teamType ? formatTeamType(team.teamType) : null)) && (
-                                          <span className="ml-1 font-normal text-gray-400" style={{ fontSize: 11 }}>
+                                          <span className="ml-1 text-[11px] font-normal text-gray-400">
                                             (<Highlight text={team.platform ?? formatTeamType(team.teamType!)} term={search} />)
                                           </span>
                                         )}
@@ -538,7 +503,7 @@ export function SortingFrameBoard({ initialData }: Props) {
                                         : 'grid-template-rows 150ms ease-out',
                                     }}
                                   >
-                                    <div style={{ overflow: 'hidden' }}>
+                                    <div className="overflow-hidden">
                                       <div
                                         className="flex divide-x divide-gray-200 bg-white"
                                         style={{ borderLeft: `3px solid ${vsColour.text}` }}

@@ -4,42 +4,23 @@ import { useState } from 'react';
 import { AlertTriangle, FileText } from 'lucide-react';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
 import type { Feature, FeatureStory } from '@/lib/models';
 import { useDispatchStore } from '@/store/useDispatchStore';
-import { highlightMatch } from '@/lib/highlightMatch';
 import { stripFeaturePrefix } from '@/lib/stripFeaturePrefix';
+import { getStatusPillClasses } from '@/components/ui/StatusPill';
+import { StatusDot } from '@/components/ui/StatusDot';
+import { Highlight } from '@/components/ui/Highlight';
 
 type FeatureCardProps = {
   feature: Feature;
   searchTerm?: string;
 };
 
-function Highlight({ text, term }: { text: string; term?: string }) {
-  const segments = highlightMatch(text, term ?? '');
-  return (
-    <>
-      {segments.map((seg, i) =>
-        seg.highlight ? (
-          <mark
-            key={i}
-            style={{ background: '#FDDD1C', color: '#78350f', borderRadius: 2, padding: '0 2px' }}
-          >
-            {seg.text}
-          </mark>
-        ) : (
-          <span key={i}>{seg.text}</span>
-        )
-      )}
-    </>
-  );
-}
-
-function getStatusPill(status: string | null | undefined) {
-  const s = (status ?? '').toLowerCase();
-  if (s === 'committed') return { label: 'Committed', cls: 'bg-green-100 text-green-700' };
-  if (s === 'planned')   return { label: 'Planned',   cls: 'bg-blue-100 text-blue-700' };
-  return                        { label: 'Draft',     cls: 'bg-gray-100 text-gray-600' };
-}
+type DragProps = {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
+};
 
 function getDepBadge(counts: Feature['dependencyCounts']) {
   const total = counts.requires + counts.blocks + counts.conflict;
@@ -67,29 +48,6 @@ function getSourceBadge(
   return { label: sourceSystem.toUpperCase().slice(0, 6), cls: 'bg-gray-100 text-gray-500' };
 }
 
-// Maps story workflow status to a colour.
-function storyStatusColor(status: string | null): string {
-  const s = (status ?? '').toLowerCase();
-  if (s === 'done')        return '#16a34a'; // success green
-  if (s === 'in progress') return '#d97706'; // warning amber
-  if (s === 'blocked')     return '#dc2626'; // danger red
-  return '#9ca3af';                          // neutral gray (To Do / unknown)
-}
-
-function StatusDot({ status, size = 8 }: { status: string | null; size?: number }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: storyStatusColor(status),
-        flexShrink: 0,
-      }}
-    />
-  );
-}
 
 // Story-sprint distribution dots — Detailed mode only.
 // Suppressed when all stories are in the same sprint as the parent feature.
@@ -124,14 +82,14 @@ function StorySprintDots({
           const sprintStories = bySprint.get(sprintNum)!;
           return (
             <span key={sprintNum} className="flex items-center gap-0.5">
-              <span className="text-gray-400" style={{ fontSize: 10 }}>
+              <span className="text-[10px] text-gray-400">
                 S{sprintNum}
               </span>
               {sprintStories.length > 6 ? (
                 // Condensed format: ●×N
                 <span className="flex items-center gap-0.5">
                   <StatusDot status={null} size={7} />
-                  <span className="text-gray-500" style={{ fontSize: 10 }}>
+                  <span className="text-[10px] text-gray-500">
                     ×{sprintStories.length}
                   </span>
                 </span>
@@ -147,35 +105,33 @@ function StorySprintDots({
   );
 }
 
-export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
+// ── Shared card body — used by both draggable and static variants ─────────────
+
+function FeatureCardBody({
+  feature,
+  searchTerm,
+  drag,
+}: {
+  feature: Feature;
+  searchTerm?: string;
+  drag?: DragProps;
+}) {
   const { density } = useDispatchStore();
   const [storiesOpen, setStoriesOpen] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id: feature.id,
-      data: { featureId: feature.id },
-    });
-
-  // Transform/transition on the outer wrapper so card + story panel move together.
-  const wrapperStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const statusPill  = getStatusPill(feature.commitmentStatus);
+  const statusPill  = getStatusPillClasses(feature.commitmentStatus);
   const depBadge    = getDepBadge(feature.dependencyCounts);
   const sourceBadge = getSourceBadge(feature.sourceSystem);
   const isCompact   = density === 'compact';
   const stories     = feature.stories ?? [];
 
   return (
-    <div ref={setNodeRef} style={wrapperStyle}>
+    <>
       {/* ── Feature card ──────────────────────────────────────────────── */}
       <div
-        {...attributes}
-        {...listeners}
-        className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
+        {...drag?.attributes}
+        {...drag?.listeners}
+        className="rounded border border-gray-200 bg-white p-3 shadow-sm transition-transform duration-100 hover:scale-[1.01]"
       >
         {/* Header row: ticket key (left) + source system badge (right).
             Source badge is always visible — both compact and detailed. */}
@@ -195,8 +151,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
 
           {sourceBadge && (
             <span
-              className={`shrink-0 font-medium ${sourceBadge.cls}`}
-              style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4 }}
+              className={`shrink-0 rounded px-[5px] py-[1px] text-[9px] font-medium ${sourceBadge.cls}`}
             >
               {sourceBadge.label}
             </span>
@@ -246,15 +201,14 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
         {/* Story expand toggle — detailed only */}
         {!isCompact && stories.length > 0 && (
           <button
-            className="mt-2 flex w-full items-center gap-1 text-gray-400 hover:text-gray-600"
-            style={{ fontSize: 11 }}
+            className="mt-2 flex w-full items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
             // Stop pointer-down from activating the dnd-kit drag sensor.
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setStoriesOpen((o) => !o)}
           >
             <span
+              className="inline-block"
               style={{
-                display: 'inline-block',
                 transform: storiesOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                 transition: 'transform 150ms ease-out',
               }}
@@ -277,19 +231,17 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
             transition: 'grid-template-rows 150ms ease-out',
           }}
         >
-          <div style={{ overflow: 'hidden' }}>
+          <div className="overflow-hidden">
             <div className="mt-px">
               {stories.map((story) => (
                 <div
                   key={story.id}
-                  className="flex items-center gap-1.5 py-1 pr-1"
-                  style={{ borderLeft: '2px solid #e5e7eb', paddingLeft: 12 }}
+                  className="flex items-center gap-1.5 border-l-2 border-gray-200 py-1 pl-3 pr-1"
                 >
                   {/* Ticket key — muted red, monospace */}
                   <a
                     href="#"
-                    className="shrink-0 font-mono hover:underline"
-                    style={{ fontSize: 10, color: '#991b1b', opacity: 0.75 }}
+                    className="shrink-0 text-[10px] font-mono text-red-800 opacity-75 hover:underline"
                     title="View in source system (coming soon)"
                     onClick={(e) => e.preventDefault()}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -298,7 +250,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                   </a>
 
                   {/* Story title — feature prefix stripped if present */}
-                  <span className="flex-1 truncate text-gray-700" style={{ fontSize: 12 }}>
+                  <span className="flex-1 truncate text-xs text-gray-700">
                     {stripFeaturePrefix(story.title, feature.title)}
                   </span>
 
@@ -306,10 +258,7 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
                   {story.sprintNumber !== null &&
                     story.sprintNumber !== undefined &&
                     story.sprintNumber !== feature.sprintNumber && (
-                      <span
-                        className="shrink-0 rounded px-1 text-gray-500"
-                        style={{ fontSize: 10, backgroundColor: '#f3f4f6' }}
-                      >
+                      <span className="shrink-0 rounded bg-gray-100 px-1 text-[10px] text-gray-500">
                         S{story.sprintNumber}
                       </span>
                     )}
@@ -322,6 +271,38 @@ export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+// ── Draggable variant — requires DndContext + SortableContext ─────────────────
+
+export function FeatureCard({ feature, searchTerm }: FeatureCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({
+      id: feature.id,
+      data: { featureId: feature.id },
+    });
+
+  // Transform/transition on the outer wrapper so card + story panel move together.
+  const wrapperStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={wrapperStyle}>
+      <FeatureCardBody feature={feature} searchTerm={searchTerm} drag={{ attributes, listeners }} />
+    </div>
+  );
+}
+
+// ── Static variant — no DnD context required, used in Team Planning ──────────
+
+export function FeatureCardStatic({ feature, searchTerm }: FeatureCardProps) {
+  return (
+    <div>
+      <FeatureCardBody feature={feature} searchTerm={searchTerm} />
     </div>
   );
 }
