@@ -148,6 +148,34 @@ export const helpSections: HelpSection[] = [
         ],
       },
       {
+        id: "planning-stage",
+        title: "Planning Stage",
+        summary:
+          "The Planning Stage indicator shows where the room is in the PI Planning event. The facilitator sets the stage from the pill in the planning header.",
+        tags: ["planning stage", "facilitator", "pi planning event"],
+        callout:
+          "Stages are freely changeable — there are no workflow gates. The facilitator can move forward, backward, or jump multiple stages at any time.",
+        sections: [
+          {
+            id: "planning-stage-overview",
+            title: "What it is",
+            defaultOpen: true,
+            content:
+              "Dispatch models PI Planning as six fixed, ordered stages. The current stage appears as a pill in the red planning header on every planning page and is visible to everyone in the room.",
+            bullets: [
+              "1. Business Context & Vision — leaders set context, vision and top objectives",
+              "2. Team Breakouts — Draft Plan — teams draft their initial plan",
+              "3. Draft Plan Review — teams present draft plans for peer and leadership review",
+              "4. Team Breakouts — Revised Plan — teams revise based on feedback",
+              "5. Final Plan Review & RoART — final review, risk acceptance, PI objective commitment",
+              "6. PI Planning Complete — the committed plan is locked and delivery begins",
+            ],
+            tip:
+              "Every stage change is recorded in the Activity Feed with a from/to trail, so the room always has a timestamped history of how the event progressed.",
+          },
+        ],
+      },
+      {
         id: "dependencies",
         title: "Dependencies",
         summary:

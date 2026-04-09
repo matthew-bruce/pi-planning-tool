@@ -1,15 +1,11 @@
 import type { Feature } from '@/lib/models';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import {
+  getActiveOrSelectedProgramIncrement,
+  type ProgramIncrementRow,
+} from '@/lib/supabase/shared';
 
-type DbCycle = {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  is_archived: boolean;
-  current_stage: number;
-};
+type DbCycle = ProgramIncrementRow;
 
 type DbSprint = {
   id: string;
@@ -113,40 +109,8 @@ export type SortingFrameData = {
   availablePlatforms: string[];
 };
 
-export async function getActiveOrSelectedPlanningCycle(
-  selectedCycleId?: string
-): Promise<DbCycle | null> {
-  const supabase = getSupabaseServerClient();
-
-  if (selectedCycleId) {
-    const { data } = await supabase
-      .from('planning_cycles')
-      .select('*')
-      .eq('id', selectedCycleId)
-      .maybeSingle();
-
-    if (data) return data as DbCycle;
-  }
-
-  const { data: active } = await supabase
-    .from('planning_cycles')
-    .select('*')
-    .eq('is_active', true)
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (active) return active as DbCycle;
-
-  const { data: latest } = await supabase
-    .from('planning_cycles')
-    .select('*')
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return (latest as DbCycle | null) ?? null;
-}
+// Re-export from the shared module so existing call sites continue to work.
+export { getActiveOrSelectedProgramIncrement };
 
 export async function getCycleSprints(cycleId: string): Promise<DbSprint[]> {
   const supabase = getSupabaseServerClient();
@@ -293,7 +257,7 @@ export async function getSortingFrameData(input: {
   selectedCycleId?: string;
   selectedArtId?: string;
 }): Promise<SortingFrameData> {
-  const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
+  const cycle = await getActiveOrSelectedProgramIncrement(input.selectedCycleId);
   const arts = (await getArts()).map((art) => ({
     id: art.id,
     name: art.name,

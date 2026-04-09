@@ -1,8 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import {
-  getActiveOrSelectedPlanningCycle,
-  getCycleSprints,
-} from '@/lib/supabase/sortingFrame';
+import { getActiveOrSelectedProgramIncrement } from '@/lib/supabase/shared';
+import { getCycleSprints } from '@/lib/supabase/sortingFrame';
 
 // ─── DB row types ─────────────────────────────────────────────────────────────
 
@@ -204,7 +202,7 @@ export async function getTeamPlanningData(input: {
   selectedCycleId?: string;
   selectedArtId?: string;
 }): Promise<TeamPlanningData> {
-  const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
+  const cycle = await getActiveOrSelectedProgramIncrement(input.selectedCycleId);
 
   if (!cycle) {
     return { cycle: null, sprints: [], arts: [], selectedArtId: null, teams: [] };

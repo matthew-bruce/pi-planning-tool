@@ -13,12 +13,16 @@ import {
   GitBranch,
   HelpCircle,
   LayoutGrid,
+  Lock,
+  LockOpen,
   Settings,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { PlanningStagePill } from '@/components/planning/PlanningStagePill';
 
 const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 52;
@@ -35,7 +39,19 @@ const planningNavItems: NavItem[] = [
   { href: '/help',           label: 'Help',                icon: HelpCircle  },
 ];
 
-export function DispatchShell({ children }: { children: React.ReactNode }) {
+type DispatchShellProps = {
+  children: React.ReactNode;
+  /** Active Program Increment id, resolved server-side in app/layout.tsx. */
+  cycleId?: string | null;
+  /** current_stage for the active Program Increment — drives the stage pill. */
+  currentStage?: number | null;
+};
+
+export function DispatchShell({
+  children,
+  cycleId = null,
+  currentStage = null,
+}: DispatchShellProps) {
   const pathname = usePathname();
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const isHelp  = pathname === '/help'  || pathname.startsWith('/help/');
@@ -46,6 +62,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   // The useEffect below reads localStorage + screen width after hydration.
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile,  setIsMobile]  = useState(false);
+  const [syncMode,  setSyncMode]  = useState<'read_only' | 'read_write'>('read_only');
 
   const {
     arts,
@@ -86,6 +103,20 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     hydrateSeed();
   }, [hydrateSeed]);
+
+  // Fetch sync_mode from app_settings once on mount
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'sync_mode')
+      .maybeSingle()
+      .then(({ data }: { data: { value: string } | null }) => {
+        if (data?.value === 'read_write') setSyncMode('read_write');
+      });
+  }, []);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -137,7 +168,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           {/* Wordmark + subtitle — hidden when collapsed */}
           {!collapsed && (
             <div className="mt-2">
-              <h1 className="text-2xl font-bold text-royalRed">Dispatch</h1>
+              <h1 className="text-2xl font-semibold text-royalRed">Dispatch</h1>
               <p className="mt-0.5 text-xs text-gray-500">PI Planning orchestration</p>
             </div>
           )}
@@ -183,6 +214,29 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {/* Sync mode indicator — display-only, above config section */}
+        <div className="shrink-0 border-t border-gray-100 pt-3">
+          {collapsed ? (
+            <div
+              title={syncMode === 'read_write' ? 'Read + Write mode' : 'Read Only mode'}
+              className="mb-1 flex justify-center text-textMuted"
+            >
+              {syncMode === 'read_write' ? <LockOpen size={14} /> : <Lock size={14} />}
+            </div>
+          ) : (
+            <div className="mb-2 flex items-center gap-2 px-1">
+              {syncMode === 'read_write' ? (
+                <LockOpen size={13} className="shrink-0 text-textMuted" />
+              ) : (
+                <Lock size={13} className="shrink-0 text-textMuted" />
+              )}
+              <span className="text-xs text-textMuted">
+                {syncMode === 'read_write' ? 'Read + Write' : 'Read Only'}
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* Config items — pinned to bottom */}
         <div className="mt-auto shrink-0 pt-3">
           {!collapsed && (
@@ -214,8 +268,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                 role="switch"
                 aria-checked={demoMode}
                 onClick={() => setDemoMode(!demoMode)}
-                className="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none"
-                style={{ backgroundColor: demoMode ? '#FDDD1C' : '#d1d5db' }}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none ${demoMode ? 'bg-royalYellow' : 'bg-gray-300'}`}
               >
                 <span
                   className="pointer-events-none mt-0.5 inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
@@ -264,20 +317,14 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
       >
         {/* Demo Mode amber banner */}
         {demoMode && showPlanningHeader && (
-          <div
-            className="px-4 py-1.5 text-center text-xs font-semibold"
-            style={{ backgroundColor: '#FDDD1C', color: '#78350f' }}
-          >
+          <div className="bg-royalYellow px-4 py-1.5 text-center text-xs font-semibold text-yellow-900">
             Demo Mode — simulated data is active
           </div>
         )}
 
         {/* Planning header — royalRed background */}
         {showPlanningHeader && (
-          <header
-            className="relative flex flex-wrap items-center gap-4 overflow-hidden p-4"
-            style={{ backgroundColor: '#EE2722' }}
-          >
+          <header className="bg-royalRed relative flex flex-wrap items-center gap-4 p-4">
             {/* Diagonal stripe watermark */}
             <div
               className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden"
@@ -313,25 +360,29 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Header controls */}
-            <div className="relative flex flex-wrap items-center gap-4" style={{ zIndex: 1 }}>
+            <div className="relative flex flex-wrap items-center gap-4 w-full" style={{ zIndex: 1 }}>
               {/* ART selector */}
               <div className="flex items-center gap-2">
                 {arts.map((art) => (
                   <button
                     key={art.id}
                     onClick={() => setSelectedArtId(art.id)}
-                    className="rounded-full border px-3 py-1 text-sm"
-                    style={
+                    className={`rounded-full border px-3 py-1 text-sm ${
                       selectedArtId === art.id
-                        ? { backgroundColor: '#ffffff', color: '#EE2722', borderColor: '#ffffff', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
-                        : { backgroundColor: 'transparent', color: '#ffffff', borderColor: 'rgba(255,255,255,0.25)', transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }
-                    }
+                        ? 'bg-white text-royalRed border-white'
+                        : 'bg-transparent text-white border-white/25'
+                    }`}
+                    style={{ transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }}
                   >
                     {art.name}
                   </button>
                 ))}
               </div>
 
+              {/* Planning Stage pill — right-aligned, visually distinct from ART pills */}
+              <div className="ml-auto">
+                <PlanningStagePill cycleId={cycleId} currentStage={currentStage} />
+              </div>
             </div>
           </header>
         )}

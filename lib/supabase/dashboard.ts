@@ -1,16 +1,12 @@
 import type { DashboardData } from '@/lib/types/dashboard';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import {
+  getActiveOrSelectedProgramIncrement,
+  type ProgramIncrementRow,
+} from '@/lib/supabase/shared';
 import { formatSprintRange } from '@/lib/utils';
 
-type Cycle = {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  is_archived: boolean;
-  current_stage: number;
-};
+type Cycle = ProgramIncrementRow;
 
 type Art = { id: string; name: string; short_name: string | null; is_active: boolean };
 
@@ -114,40 +110,9 @@ function freshnessOf(latestImportAt: string | null): 'Fresh' | 'Stale' | 'Missin
   return ms <= 60 * 60 * 1000 ? 'Fresh' : 'Stale';
 }
 
-export async function getActiveOrSelectedPlanningCycle(
-  selectedCycleId?: string
-): Promise<Cycle | null> {
-  const supabase = getSupabaseServerClient();
-
-  if (selectedCycleId) {
-    const { data } = await supabase
-      .from('planning_cycles')
-      .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
-      .eq('id', selectedCycleId)
-      .maybeSingle();
-
-    if (data) return data as Cycle;
-  }
-
-  const { data: active } = await supabase
-    .from('planning_cycles')
-    .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
-    .eq('is_active', true)
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (active) return active as Cycle;
-
-  const { data: latest } = await supabase
-    .from('planning_cycles')
-    .select('id,name,start_date,end_date,is_active,is_archived,current_stage')
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return (latest as Cycle | null) ?? null;
-}
+// Re-export for backwards compatibility with existing call sites.
+// The canonical implementation lives in lib/supabase/shared.ts.
+export { getActiveOrSelectedProgramIncrement };
 
 export async function getDashboardSummary(
   cycleId: string,
@@ -721,7 +686,7 @@ export async function getDashboardData(input: {
   selectedCycleId?: string;
   selectedArtId?: string;
 } = {}): Promise<DashboardData> {
-  const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
+  const cycle = await getActiveOrSelectedProgramIncrement(input.selectedCycleId);
   const supabase = getSupabaseServerClient();
 
   const { data: arts } = await supabase

@@ -11,6 +11,8 @@
 
 Active work — tackle these before anything else.
 
+- [ ] **Review `feature/consolidate-all-features` on Vercel preview** — branch consolidates card styling, dependencies redesign + sync mode pill, and Planning Stage pill. Pending preview review before merge to main. Do NOT merge to main until Vercel preview confirmed.
+
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
 - [x] **Schema Phase 1** — additive changes only — complete
 - [x] **CRITICAL BUG — rebuildLiveTablesFromSnapshots fixed**
@@ -46,6 +48,7 @@ Active work — tackle these before anything else.
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 - [ ] Team Planning Room — design consistency pass (visual alignment with Sorting Frame is approximate, not complete — deferred)
 - [ ] UI batch 2 fixes — in progress via Claude Code
+- [x] **Design system Phase 1 consolidation** — `components/ui/` library created (FeatureCard, FeatureCardStatic, StatusPill, StatusDot, Highlight, WarningBanner, SprintHeader, EmptyCell, PageHeader), token adoption, TeamPlanningBoard full FeatureCard parity. See DESIGN_SYSTEM.md for full change log.
 
 ---
 
@@ -141,9 +144,10 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - Demo PI data was manually backfilled via SQL ✅
   - Watch for regression: any future import rollback + rebuild should re-populate correctly
 
-- [ ] **Extract shared `getActiveOrSelectedProgramIncrement`**
-  - Duplicated across `lib/supabase/dashboard.ts`, `lib/supabase/sortingFrame.ts`, `lib/supabase/teamPlanning.ts`, `lib/supabase/dependencies.ts`
-  - Move to `lib/supabase/shared.ts`
+- [x] **Extract shared `getActiveOrSelectedProgramIncrement`**
+  - Moved to `lib/supabase/shared.ts`, returns `current_stage`
+  - Re-exported from `lib/supabase/dashboard.ts` and `lib/supabase/sortingFrame.ts` for back-compat
+  - `teamPlanning.ts` and `app/api/activity/route.ts` import directly from `shared.ts`
 
 - [ ] **Program Increment carry-forward on creation**
   - When creating a new PI, automatically copy participating teams and ARTs from previous PI
@@ -241,11 +245,20 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - OFF default: DEMO — and TEST — hidden from cycle pickers
   - Stored in app_settings table
 
-- [ ] **Planning Stage indicator — live app**
-  - Facilitator control in planning header
-  - 6 stages, freely changeable, no workflow gates
-  - Contextual health feedback on Dashboard
-  - Stored on program_increments.current_stage
+- [x] **Planning Stage indicator — live app**
+  - Facilitator-set pill in the planning header (`components/planning/PlanningStagePill.tsx`)
+  - 6 fixed stages in `lib/planning/stages.ts`, freely changeable, no workflow gates
+  - Stored on `planning_cycles.current_stage` (SMALLINT nullable, 1..6)
+  - Stage changes emit `stage_changed` activity_events rows with reversal-aware 60s debounce
+  - Prerequisite for the Live Tracking Dashboard redesign (DASHBOARD_SPEC.md)
+
+- [ ] **Breadcrumb — stage history table was considered and rejected.**
+  Stage changes are recorded via `activity_events` rows with `event_type`
+  `'stage_changed'`. A separate history/audit table was considered but
+  rejected as over-engineering — the activity feed already provides a
+  timestamped, filterable, user-visible record of room events, and nothing
+  in MVP1 needs a structured stage-transition query. If a future feature
+  needs one, reconsider at that point.
 
 - [ ] **Planning Stage — contextual app behaviour (future phase)**
   - Sorting Frame, Dashboard, Dependencies all adapt per stage
@@ -254,6 +267,15 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 ---
 
 ## 🟢 P4 — Future / Post-PoC
+
+### Design System Phase 2 (when needed)
+
+- [ ] **Extract `Badge` component** — dependency badge, story count badge, source system badge are all inline in FeatureCard. Extract to `components/ui/Badge.tsx` if a third consumer appears.
+- [ ] **Extract `SectionHeader`** — VS section header in SortingFrameBoard. Extract to `components/ui/SectionHeader.tsx` if Team Planning or another board needs it.
+- [ ] **Extract `SwimLaneRow`** — team sub-header in SortingFrameBoard. Extract if reused.
+- [ ] **FeatureCard story points** — `TeamPlanningStory.storyPoints` not yet surfaced on cards (the Team Planning story model has it, FeatureStory in models.ts does not). Add `storyPoints?: number | null` to FeatureStory if needed.
+
+### Provider & Platform
 
 - [ ] Azure DevOps provider (`providers/adoProvider.ts`)
 - [ ] Jira provider (`providers/jiraProvider.ts`)
@@ -333,6 +355,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Search highlight match | ✅ Done | `lib/__tests__/highlightMatch.test.ts` |
 | Strip feature prefix | ✅ Done | `lib/__tests__/stripFeaturePrefix.test.ts` |
 | Merge strategy logic | ⬜ Not yet | Write when upsert strategy is built |
+| `setProgramIncrementStage` server action | ⬜ Not yet | Integration-flavoured — needs Supabase mock. Cover normal insert, 60-second reversal (no insert), 60-second correction (replace insert) |
 | Sorting Frame data fetcher | ⬜ Not yet | Integration test |
 | Import pipeline | ⬜ Not yet | Known CSV → expected live table output |
 | Dashboard data queries | ⬜ Not yet | |
@@ -361,4 +384,5 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 | Demo Mode | ⬜ Needs update | New sidebar location, defaults |
 | Activity Feed | ⬜ Not yet | New feature — needs article |
 | Value Streams | ⬜ Not yet | Renamed from Initiatives |
+| Planning Stage | ⬜ Needs article | New feature — pill + 6 stages, stub in `data/helpContent.ts` |
 | FAQ | ✅ Done | |

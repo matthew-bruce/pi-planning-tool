@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { DashboardData } from '@/lib/types/dashboard';
+import { STATUS_COLOURS } from '@/components/ui/StatusPill';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 type Props = { initialData: DashboardData };
 
@@ -138,51 +140,52 @@ export function LiveDashboard({ initialData }: Props) {
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Live Tracking Dashboard
-            </h1>
-            <p className="text-sm text-gray-600">
-              Real-time visibility of planning progress, dependencies and
-              readiness
-            </p>
-            <p className="mt-2 text-sm text-gray-700">
-              <span className="font-semibold">PI:</span> {data.cycle.name} (
-              {new Date(data.cycle.start_date).toLocaleDateString('en-GB')} -{' '}
-              {new Date(data.cycle.end_date).toLocaleDateString('en-GB')})
-            </p>
-            <p className="text-xs text-gray-500">
-              Last refreshed at{' '}
-              {new Date(data.refreshedAt).toLocaleTimeString('en-GB')}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedArtId}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSelectedArtId(value);
-                void refresh(value);
-              }}
-              className="rounded border border-gray-300 px-2 py-1 text-sm"
-            >
-              <option value="ALL">All ARTs</option>
-              {data.arts.map((art) => (
-                <option key={art.id} value={art.id}>
-                  {art.name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => void refresh(selectedArtId)}
-              className="rounded bg-royalRed px-3 py-1 text-sm text-white"
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="Live Tracking Dashboard"
+          subtitle={
+            <>
+              <span className="text-gray-600">
+                Real-time visibility of planning progress, dependencies and readiness
+              </span>
+              <br />
+              <span className="font-semibold text-gray-700">PI:</span>{' '}
+              <span className="text-gray-700">
+                {data.cycle.name} ({new Date(data.cycle.start_date).toLocaleDateString('en-GB')} –{' '}
+                {new Date(data.cycle.end_date).toLocaleDateString('en-GB')})
+              </span>
+              <br />
+              <span className="text-xs text-gray-500">
+                Last refreshed at {new Date(data.refreshedAt).toLocaleTimeString('en-GB')}
+              </span>
+            </>
+          }
+          actions={
+            <>
+              <select
+                value={selectedArtId}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedArtId(value);
+                  void refresh(value);
+                }}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+              >
+                <option value="ALL">All ARTs</option>
+                {data.arts.map((art) => (
+                  <option key={art.id} value={art.id}>
+                    {art.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => void refresh(selectedArtId)}
+                className="rounded bg-royalRed px-3 py-1 text-sm text-white"
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </>
+          }
+        />
       </section>
 
       {/* KPI cards with coloured left borders */}
@@ -203,7 +206,7 @@ export function LiveDashboard({ initialData }: Props) {
             >
               <p className="text-xs uppercase text-gray-500">{label}</p>
               <p
-                className="mt-2 text-3xl font-bold"
+                className="mt-2 text-3xl font-semibold"
                 style={{ color: colour.value }}
               >
                 {label === 'Convergence %' ? `${value}%` : value}
@@ -225,7 +228,7 @@ export function LiveDashboard({ initialData }: Props) {
             className="rounded-lg border border-gray-200 bg-white p-4"
           >
             <p className="text-xs uppercase text-gray-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
           </article>
         ))}
       </section>
@@ -275,9 +278,9 @@ export function LiveDashboard({ initialData }: Props) {
           </h2>
           <div className="space-y-2">
             {[
-              ['Draft', data.convergence.draft, 'bg-amber-400'],
-              ['Planned', data.convergence.planned, 'bg-blue-500'],
-              ['Committed', data.convergence.committed, 'bg-green-600'],
+              ['Draft',     data.convergence.draft,      STATUS_COLOURS.draft.bar],
+              ['Planned',   data.convergence.planned,    STATUS_COLOURS.planned.bar],
+              ['Committed', data.convergence.committed,  STATUS_COLOURS.committed.bar],
             ].map(([label, count, color]) => (
               <div key={String(label)}>
                 <div className="mb-1 flex justify-between text-sm">
