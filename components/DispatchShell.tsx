@@ -214,39 +214,25 @@ export function DispatchShell({
           })}
         </nav>
 
-        {/* Sync mode indicator — above config section */}
-        <div className="shrink-0 pt-3">
+        {/* Sync mode indicator — display-only, above config section */}
+        <div className="shrink-0 border-t border-gray-100 pt-3">
           {collapsed ? (
             <div
               title={syncMode === 'read_write' ? 'Read + Write mode' : 'Read Only mode'}
-              className="mb-1 flex justify-center"
+              className="mb-1 flex justify-center text-textMuted"
             >
-              {syncMode === 'read_write' ? (
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-royalYellow">
-                  <LockOpen size={12} style={{ color: '#111827' }} />
-                </span>
-              ) : (
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-400">
-                  <Lock size={12} />
-                </span>
-              )}
+              {syncMode === 'read_write' ? <LockOpen size={14} /> : <Lock size={14} />}
             </div>
           ) : (
-            <div className={[
-              'mb-2 flex items-center gap-2 rounded border px-3 py-1.5',
-              syncMode === 'read_write' ? 'border-amber-200 bg-amber-50' : 'border-gray-200',
-            ].join(' ')}>
+            <div className="mb-2 flex items-center gap-2 px-1">
               {syncMode === 'read_write' ? (
-                <>
-                  <LockOpen size={13} className="shrink-0 text-amber-600" />
-                  <span className="text-xs font-medium text-amber-700">Read + Write</span>
-                </>
+                <LockOpen size={13} className="shrink-0 text-textMuted" />
               ) : (
-                <>
-                  <Lock size={13} className="shrink-0 text-gray-400" />
-                  <span className="text-xs text-gray-500">Read Only</span>
-                </>
+                <Lock size={13} className="shrink-0 text-textMuted" />
               )}
+              <span className="text-xs text-textMuted">
+                {syncMode === 'read_write' ? 'Read + Write' : 'Read Only'}
+              </span>
             </div>
           )}
         </div>
