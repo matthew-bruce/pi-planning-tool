@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import {
-  getActiveOrSelectedPlanningCycle,
+  getActiveOrSelectedProgramIncrement,
   getArts,
 } from '@/lib/supabase/sortingFrame';
 import type {
@@ -45,7 +45,7 @@ export async function getDependenciesData(input: {
   selectedCycleId?: string;
   selectedArtId?: string;
 }): Promise<DependenciesData> {
-  const cycle = await getActiveOrSelectedPlanningCycle(input.selectedCycleId);
+  const cycle = await getActiveOrSelectedProgramIncrement(input.selectedCycleId);
   const allArts = (await getArts()).map((art) => ({
     id: art.id,
     name: art.name,
