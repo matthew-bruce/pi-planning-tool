@@ -11,7 +11,7 @@
 | State / Demo | Zustand + localStorage |
 | Drag & drop | @dnd-kit/core, @dnd-kit/sortable |
 | Dependency graph | reactflow + dagre |
-| Tests | vitest (53 passing) |
+| Tests | vitest (59 passing) |
 | Deploy | Vercel (auto-deploy on push to main) |
 
 ## Repo & Live URLs
@@ -125,7 +125,7 @@ lib/
     readiness.ts      – Cycle readiness summaries
     teams.ts
     types.ts          – Admin-layer TypeScript types
-    __tests__/        – vitest unit tests (42 passing)
+    __tests__/        – vitest unit tests (59 passing)
   models.ts           – Canonical domain types (Zustand/demo layer)
   seedData.ts         – Demo seed data generator
   supabase/
@@ -362,9 +362,12 @@ server component.
 ### Dependencies Graph
 - ReactFlow + dagre LR layout (rankSep 180, nodeSep 60)
 - Two node types: `feature` (220×90, ART-coloured border) and `external` (160×50, dashed grey)
-- Edges coloured by criticality: High → royalRed, Medium → warning, Low → neutral
+- Edges coloured by **dependency_status** (not criticality). Criticality drives stroke weight only: High=3px, Medium=2px, Low=1.5px
+- Blocked edges use CSS pulse animation
+- Resolved/removed edges use dashed lines
+- Legend panel pinned inside ReactFlow canvas (bottom-left)
 - ART filter via URL searchParam; "Show all ARTs" clears filter
-- Click any node → 320px right side panel with full dependency context
+- Click any node → 320px right side panel with full dependency context; includes ephemeral status toggle (local state, preview only, not persisted)
 - MiniMap hidden below 1024px
 
 ---

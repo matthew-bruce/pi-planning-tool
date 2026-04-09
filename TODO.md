@@ -26,7 +26,7 @@ Active work — tackle these before anything else.
   - Fix: `resolveFeatureSprints()` — backfills features.sprint_id from snapshot sprint_name → sprints UUID
   - Fix: `resolveStoryRelationships()` — backfills stories.feature_id, team_id (inherited from feature), sprint_id
   - Pure helpers `computeStoryUpdates()` and `computeFeatureSprintUpdates()` in `importHelpers.ts`
-  - 14 new unit tests — 42 passing total
+  - 14 new unit tests — 59 passing total
 - [x] **team_art_assignments seeded for Demo PI** — 29 rows, 20 OOH teams / 9 WAA teams, derived from features.art_id
 - [x] **stories.team_id and sprint_id backfilled** on Demo PI via SQL (data fix for existing records)
 - [x] **dependencies.source_feature_id and target_feature_id backfilled** on Demo PI — 27/27 sources linked, 16/27 targets linked (11 correctly null — external entities)
@@ -49,6 +49,11 @@ Active work — tackle these before anything else.
 - [x] **Card styling consistency** — `components/ui/` shared library (FeatureCard, FeatureCardStatic, StatusPill, StatusDot, Highlight, WarningBanner, SprintHeader, EmptyCell, PageHeader), token adoption across all pages
 - [x] **Planning Stage indicator live** — `PlanningStagePill` in planning header (right-aligned, outlined style, `Stage: N · Label` format, dropdown unclipped), 6 stages in `lib/planning/stages.ts`, optimistic update + rollback
 - [x] **Sync mode indicator moved to sidebar** — display-only `Lock`/`LockOpen` icon below nav links, above config section; removed from planning header
+- [x] **Dependencies Near You — visual redesign** (dependency_status colours, criticality stroke weight, blocked pulse animation, legend panel, ephemeral status toggle in side panel)
+- [x] **Card styling consistency** — FeatureCard and story cards now identical across Sorting Frame and Team Planning Room
+- [x] **Planning Stage indicator** — PlanningStagePill in red header (right-aligned, outlined style), server action `setProgramIncrementStage`, 60-second reversal-aware debounce, `stage_changed` events writing to `activity_events`
+- [x] **Sync mode indicator** — moved from planning header to sidebar, display-only, Lock/LockOpen icon, collapsed icon + tooltip
+- [x] **`metadata` jsonb column added to `activity_events`** — required for stage_changed payload; migration run manually in Supabase SQL Editor
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 - [ ] Team Planning Room — design consistency pass (visual alignment with Sorting Frame is approximate, not complete — deferred)
 - [ ] UI batch 2 fixes — in progress via Claude Code
@@ -178,6 +183,8 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 ---
 
 ## 🔵 P3 — Features & UX
+
+- [ ] **Activity Feed date filter fallback** — when current date exceeds PI end_date, default upper bound to `now()` so recent events (stage changes etc.) are visible
 
 - [ ] **Team Planning Room — design consistency pass**
   - Visual alignment with Sorting Frame is approximate, not pixel-perfect
@@ -354,7 +361,7 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
 |---|---|---|
 | Sprint generation utilities | ✅ Done | `lib/planning/__tests__/` |
 | Import rebuild — value stream/team resolution | ✅ Done | 8 unit tests |
-| Import rebuild — story/feature sprint+team resolution | ✅ Done | 14 unit tests — 42 total |
+| Import rebuild — story/feature sprint+team resolution | ✅ Done | 14 unit tests — 59 total |
 | Search highlight match | ✅ Done | `lib/__tests__/highlightMatch.test.ts` |
 | Strip feature prefix | ✅ Done | `lib/__tests__/stripFeaturePrefix.test.ts` |
 | Merge strategy logic | ⬜ Not yet | Write when upsert strategy is built |

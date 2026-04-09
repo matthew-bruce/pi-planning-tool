@@ -87,9 +87,6 @@ Several fields were null in the demo data before this session and were fixed via
 
 These are now correct in the DB. The import pipeline fixes mean future imports won't have the same problem.
 
-**`getActiveOrSelectedProgramIncrement` is duplicated:**
-This pattern (get active PI, fall back to Demo PI UUID) is now in four fetchers: `dashboard.ts`, `sortingFrame.ts`, `teamPlanning.ts`, `dependencies.ts`. It should be extracted to `lib/supabase/shared.ts` in P2. Don't add a fifth copy — reference this as a known debt item.
-
 **Dependency column names have the `dependency_` prefix:**
 The DB columns are `dependency_type`, `dependency_criticality`, `dependency_owner`, etc. These will be renamed in Phase 2. When writing queries or types, use the current names but note the P2 rename.
 
@@ -102,9 +99,6 @@ On Sorting Frame, Team Planning and Dependencies, the ART selector updates a URL
 **The Zustand store still exists and is used by Triage and Demo Mode:**
 Don't remove it. It's still needed for the Triage page (which hasn't been connected to Supabase yet) and for the Demo Mode simulation (which is P2 work). When connecting Triage, follow the same server component pattern and remove Zustand from that page only.
 
-**Branch vs main:**
-The latest commit with Dependencies Near You is on branch `claude/connect-planning-room-supabase-JMGyo`. It needs to be merged to main before Dependencies is live in production. Check Vercel deployment history if unsure what's on main.
-
 **Corporate machine constraints:**
 No admin rights. `NODE_EXTRA_CA_CERTS` and `CLAUDE_CODE_GIT_BASH_PATH` are set as permanent Windows user environment variables. Claude Code launched via `cmd /c "claude"`. Don't suggest installs that require admin rights without flagging this.
 
@@ -112,46 +106,48 @@ No admin rights. `NODE_EXTRA_CA_CERTS` and `CLAUDE_CODE_GIT_BASH_PATH` are set a
 
 ## 4. What Comes Next
 
-### Immediate — merge pending PR
-Branch `claude/connect-planning-room-supabase-JMGyo` contains Team Planning + Dependencies work and needs merging to main. Verify the Dependencies page looks correct on the branch URL first.
+### Immediate — no pending branches
+All feature work is on main. One clean branch, no pending PRs.
 
-### Next task — Connect Triage to Supabase (last P1 gap)
-This is the only remaining P1 item. The Triage page currently shows Zustand/seed data.
-
-What it should do:
-- Fetch features with `sprint_id IS NULL` for the active PI (these are parking lot features)
-- Show them in a manageable list for bulk assignment
-- MVP1: read-only view (no sprint assignment write-back yet — that's Read+Write mode)
+### Next task — Connect Triage to Supabase (only remaining P1 gap)
+The Triage page currently shows Zustand/seed data.
+- Fetch features with `sprint_id IS NULL` for active PI
+- Read-only view in MVP1 — no write-back
 - Server component pattern, same as all other pages
 - Create `lib/supabase/triage.ts`
 
-### After Triage — P2 options to discuss
-Once all P1 gaps are closed, the sensible P2 candidates in rough priority order are:
-1. **Extract shared `getActiveOrSelectedProgramIncrement`** — low effort, high value for maintainability
-2. **Team Planning design consistency pass** — the visual alignment is approximate, not complete
-3. **Schema Phase 2 renames** — significant but important before a real event (use Opus 4.6 for this)
-4. **Planning Stage indicator** — high product value, needed for real events
+### After Triage — P2 candidates in priority order
+1. Reality reconciliation pass — full audit of ARCHITECTURE.md and TODO.md 
+   against actual codebase before Dashboard Phase 1 build
+2. Dashboard Phase 1 — layout shell, three zones (Headline/Signals/Pulse), 
+   ConceptualTile wrapper, dashboardThresholds.ts, dashboardActions.ts
+   (full spec in DASHBOARD_SPEC.md)
+3. Extract shared `getActiveOrSelectedProgramIncrement` — DONE (in shared.ts)
+4. Schema Phase 2 renames — significant, use Opus 4.6
+5. ART header loading inconsistency — investigate why ARTs load inconsistently 
+   across pages (Sorting Frame is reliable, others are not)
 
 ---
 
 ## 5. Open Questions
 
-**Dependencies page — needs visual review:**
-The Dependencies Near You page was just built and deployed to the branch. It hasn't been reviewed in a browser yet. Open questions:
-- Does the graph render correctly with 27 edges and 38 nodes?
-- Do external nodes (ServiceNow, Infrastructure etc.) display distinctly?
-- Does ART filtering work (WAA vs OOH)?
-- Does the node click side panel work?
-- Are there any React hydration errors from ReactFlow + server components?
+### Open questions / known issues
+
+**ART header inconsistency:**
+ART pills load reliably on Sorting Frame but inconsistently on other pages — 
+sometimes showing CRM, sometimes missing ARTs. Root cause not yet diagnosed. 
+Likely in how ARTs are fetched per page vs the shared header component.
+
+**Activity Feed date filter:**
+Events after the PI end_date are invisible in the feed because the default date 
+filter uses PI start/end dates. The demo PI ended 24 March 2026. Stage change 
+events from April 2026 don't appear. Fix: default upper bound to `now()` when 
+current date exceeds PI end_date. P3 item.
 
 **Team Planning design consistency:**
-The visual alignment with Sorting Frame was noted as "approximate, not complete". No specific bugs were filed — it was deferred. Worth a focused look before showing to stakeholders.
-
-**Sprint Goals — product decision needed before building:**
-A Sprint Goals feature was requested for Team Planning but deferred. Before building, a decision is needed: are goals per-team (each team sets their own goal for each sprint) or per-ART/sprint (one goal for all teams in that sprint)? This determines the schema. It's in P3 backlog.
+Visual alignment with Sorting Frame is functional but not pixel-perfect. 
+Deferred — functional first, polish later.
 
 **Demo Mode guard:**
-Simulation ticks in the Zustand store should not fire when Supabase has real data for the active PI. Currently there's no guard. Low risk for now (demo data is clearly labelled) but should be addressed before Phase 2 Demo Mode rework.
-
-**Merge strategy for imports:**
-The current import is destructive (delete all + rebuild). This works but means a re-import always overwrites everything. The P2 plan is to replace this with an upsert strategy using `source_key + last_synced_at`. This hasn't been started — note it as a sequencing risk before live sync is introduced.
+Simulation ticks should not fire when Supabase has real data for the active PI. 
+Low risk now (demo data clearly labelled) but needed before Phase 2 Demo Mode rework.
