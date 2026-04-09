@@ -11,6 +11,8 @@
 
 Active work — tackle these before anything else.
 
+- [ ] **Review `feature/consolidate-all-features` on Vercel preview** — branch consolidates card styling, dependencies redesign + sync mode pill, and Planning Stage pill. Pending preview review before merge to main. Do NOT merge to main until Vercel preview confirmed.
+
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
 - [x] **Schema Phase 1** — additive changes only — complete
 - [x] **CRITICAL BUG — rebuildLiveTablesFromSnapshots fixed**
