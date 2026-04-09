@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 52;
@@ -46,6 +47,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   // The useEffect below reads localStorage + screen width after hydration.
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile,  setIsMobile]  = useState(false);
+  const [syncMode,  setSyncMode]  = useState<'read_only' | 'read_write'>('read_only');
 
   const {
     arts,
@@ -86,6 +88,20 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     hydrateSeed();
   }, [hydrateSeed]);
+
+  // Fetch sync_mode from app_settings once on mount
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'sync_mode')
+      .maybeSingle()
+      .then(({ data }: { data: { value: string } | null }) => {
+        if (data?.value === 'read_write') setSyncMode('read_write');
+      });
+  }, []);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -306,7 +322,7 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Header controls */}
-            <div className="relative flex flex-wrap items-center gap-4" style={{ zIndex: 1 }}>
+            <div className="relative flex flex-wrap items-center gap-4 w-full" style={{ zIndex: 1 }}>
               {/* ART selector */}
               <div className="flex items-center gap-2">
                 {arts.map((art) => (
@@ -325,6 +341,18 @@ export function DispatchShell({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
+              {/* Sync mode pill — right-aligned */}
+              <div className="ml-auto">
+              {syncMode === 'read_write' ? (
+                <span className="rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: '#FDDD1C', color: '#111827' }}>
+                  Read + Write
+                </span>
+              ) : (
+                <span className="rounded-full border px-2.5 py-0.5 text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)' }}>
+                  Read Only
+                </span>
+              )}
+              </div>
             </div>
           </header>
         )}
