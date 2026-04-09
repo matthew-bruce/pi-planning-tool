@@ -16,6 +16,7 @@ const config: Config = {
         border: '#e5e7eb',
         textPrimary: '#111827',
         textMuted: '#6b7280',
+        warningText: '#92400e',
         vs1: '#fce7e7',
         vs2: '#fef9c3',
         vs3: '#ffedd5',

@@ -1,489 +1,630 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import type { DashboardData } from '@/lib/types/dashboard';
-import { STATUS_COLOURS } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ConceptualTile } from '@/components/ui/ConceptualTile';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { PLANNING_STAGES } from '@/lib/planning/stages';
+import {
+  convergenceThresholds,
+  getConvergenceStatus,
+  getParkingLotStatus,
+  type ThresholdStatus,
+} from '@/data/dashboardThresholds';
+import { getContextualReading } from '@/data/dashboardActions';
 
 type Props = { initialData: DashboardData };
 
-// ── KPI colour helpers ──────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-type KpiColour = {
-  border: string;   // left border colour
-  value: string;    // value text colour
+const STATUS_COLOUR: Record<ThresholdStatus, { bg: string; text: string; border: string }> = {
+  success: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-success' },
+  warning: { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-warning' },
+  danger:  { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-danger' },
 };
 
-const GREEN:  KpiColour = { border: '#16a34a', value: '#15803d' };
-const AMBER:  KpiColour = { border: '#d97706', value: '#b45309' };
-const RED:    KpiColour = { border: '#dc2626', value: '#b91c1c' };
-const NEUTRAL: KpiColour = { border: '#e5e7eb', value: '#111827' };
-
-function convergenceColour(pct: number): KpiColour {
-  if (pct >= 80) return GREEN;
-  if (pct >= 50) return AMBER;
-  return RED;
+function statusPillClasses(status: ThresholdStatus): string {
+  const s = STATUS_COLOUR[status];
+  return `${s.bg} ${s.text} rounded-full px-2 py-0.5 text-xs font-medium`;
 }
 
-function getKpiColour(label: string, value: number, extra: {
-  convergencePct?: number;
-  participatingTeams?: number;
-  cycleIsActive?: boolean;
-  teamsWithFreshData?: number;
-}): KpiColour {
-  switch (label) {
-    case 'Total Features':
-      return GREEN;
-
-    case 'Convergence %':
-      return convergenceColour(extra.convergencePct ?? value);
-
-    case 'High Criticality Dependencies':
-      return value > 0 ? RED : GREEN;
-
-    case 'Teams with Fresh Data': {
-      const total = extra.participatingTeams ?? 0;
-      if (value === 0 && extra.cycleIsActive) return RED;
-      if (total > 0 && value >= total) return GREEN;
-      if (value > 0) return AMBER;
-      return RED;
-    }
-
-    case 'Total Dependencies':
-      return NEUTRAL;
-
-    case 'Imports Today':
-      return value > 0 ? NEUTRAL : AMBER;
-
-    default:
-      return NEUTRAL;
-  }
+function statusLabel(status: ThresholdStatus): string {
+  if (status === 'success') return 'On track';
+  if (status === 'warning') return 'Watch';
+  return 'Behind';
 }
 
-function convergenceBadge(pct: number, featureCount: number) {
-  if (featureCount === 0) {
-    return { label: 'No data', cls: 'bg-gray-100 text-gray-500' };
-  }
-  if (pct >= 75) return { label: `${pct}%`, cls: 'bg-green-100 text-green-700' };
-  if (pct >= 50) return { label: `${pct}%`, cls: 'bg-amber-100 text-amber-700' };
-  return              { label: `${pct}%`, cls: 'bg-red-100 text-red-700' };
+function pct(n: number, d: number): number {
+  return d > 0 ? Math.round((n / d) * 100) : 0;
 }
 
-// ── Component ───────────────────────────────────────────────────────────────
+function freshnessStatus(lastImport: string | null): ThresholdStatus {
+  if (!lastImport) return 'danger';
+  const mins = (Date.now() - new Date(lastImport).getTime()) / 60_000;
+  if (mins <= 15) return 'success';
+  if (mins <= 60) return 'warning';
+  return 'danger';
+}
+
+function freshnessLabel(lastImport: string | null): string {
+  if (!lastImport) return 'No imports';
+  const mins = Math.round((Date.now() - new Date(lastImport).getTime()) / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  return `${hrs}h ago`;
+}
+
+function getSprintMedian(loads: number[]): number {
+  if (loads.length === 0) return 0;
+  const sorted = [...loads].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+// WCAG 1.4.1 — shape + colour for dependency status
+const DEP_STATUS_META: Record<string, { shape: string; label: string; colour: string }> = {
+  blocked:  { shape: '■', label: 'Blocked',  colour: 'text-danger' },
+  at_risk:  { shape: '▲', label: 'At risk',  colour: 'text-warningText' },
+  open:     { shape: '●', label: 'Open',     colour: 'text-textMuted' },
+  resolved: { shape: '✓', label: 'Resolved', colour: 'text-success' },
+  removed:  { shape: '—', label: 'Removed',  colour: 'text-neutral' },
+};
+
+// ── Component ──────────────────────────────────────────────────────────────
 
 export function LiveDashboard({ initialData }: Props) {
-  const [data, setData] = useState(initialData);
-  const [selectedArtId, setSelectedArtId] = useState(
-    initialData.selectedArtId ?? 'ALL'
-  );
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const data = initialData;
+  const stage = data.cycle?.current_stage ?? 1;
+  const piId = data.cycle?.id;
 
+  // Realtime subscription + polling fallback
   useEffect(() => {
-    setData(initialData);
-    setSelectedArtId(initialData.selectedArtId ?? 'ALL');
-  }, [initialData]);
+    if (!piId) return;
 
-  const refresh = async (artId: string) => {
-    const params = new URLSearchParams();
-    if (data.cycle?.id) params.set('cycleId', data.cycle.id);
-    if (artId !== 'ALL') params.set('artId', artId);
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
 
-    setLoading(true);
+    const channel = supabase
+      .channel(`dashboard-${piId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'features', filter: `planning_cycle_id=eq.${piId}` },
+        () => router.refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'dependencies', filter: `planning_cycle_id=eq.${piId}` },
+        () => router.refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'import_snapshots' },
+        () => router.refresh(),
+      )
+      .subscribe();
 
-    try {
-      const response = await fetch(`/api/dashboard?${params.toString()}`);
-      const payload = (await response.json()) as DashboardData;
-      setData(payload);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 2-minute polling fallback (corporate networks drop WebSockets)
+    const poll = setInterval(() => router.refresh(), 120_000);
 
-  const maxSprintCount = useMemo(
-    () =>
-      Math.max(
-        1,
-        ...data.sprintDistribution.map((item) =>
-          Math.max(item.featureCount, item.storyCount)
-        )
-      ),
-    [data.sprintDistribution]
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+    };
+  }, [piId, router]);
+
+  // Derived values
+  const totalFeatures = data.summary.totalFeatures;
+  const featuresWithSprint = data.artConvergence.reduce((s, a) => s + a.committed, 0);
+  const overallPct = pct(featuresWithSprint, totalFeatures);
+  const overallStatus = getConvergenceStatus(overallPct, stage);
+
+  const parkingLotCount = totalFeatures - featuresWithSprint;
+  const parkingLotStatus = getParkingLotStatus(parkingLotCount, stage);
+
+  const highCritDeps = data.dependencyHealth.reduce(
+    (acc, d) => ({ count: acc.count + d.highCriticalityCount, blocked: acc.blocked + (d.status === 'blocked' ? d.count : 0), atRisk: acc.atRisk + (d.status === 'at_risk' ? d.count : 0) }),
+    { count: 0, blocked: 0, atRisk: 0 },
   );
+  const depMetricStatus: ThresholdStatus = highCritDeps.blocked > 0 ? 'danger' : highCritDeps.atRisk > 0 ? 'warning' : 'success';
 
-  // Derived convergence % for KPI colouring
-  const totalForConvergence =
-    data.convergence.draft + data.convergence.planned + data.convergence.committed;
-  const convergencePct = totalForConvergence > 0
-    ? Math.round((data.convergence.committed / totalForConvergence) * 100)
-    : 0;
+  const teamStatus: ThresholdStatus =
+    data.teamCounts.participating < data.teamCounts.total ? 'danger' : 'success';
+
+  const importStatus = freshnessStatus(data.lastImportCreatedAt);
+
+  // Sprint load chart + median analysis
+  const sprintLoadData = data.sprintLoad;
+  const sprintTotals = sprintLoadData.map((s) => s.committed + s.planned);
+  const sprintMedian = getSprintMedian(sprintTotals);
+  const heaviestSprint = useMemo(() => {
+    if (sprintLoadData.length === 0) return null;
+    const max = sprintLoadData.reduce((a, b) =>
+      a.committed + a.planned > b.committed + b.planned ? a : b,
+    );
+    return max.committed + max.planned > sprintMedian * 2 ? max : null;
+  }, [sprintLoadData, sprintMedian]);
+
+  const sprintLoadStatus: ThresholdStatus = (() => {
+    if (!heaviestSprint) return 'success';
+    const total = heaviestSprint.committed + heaviestSprint.planned;
+    return total > sprintMedian * 3 ? 'danger' : 'warning';
+  })();
+
+  // ART convergence analysis for hero card
+  const behindArts = data.artConvergence.filter((a) => {
+    const threshold = convergenceThresholds[stage];
+    if (!threshold) return false;
+    return pct(a.committed, a.total) < threshold.successRange[0];
+  });
+  const onTrackArts = data.artConvergence.filter((a) => {
+    const threshold = convergenceThresholds[stage];
+    if (!threshold) return true;
+    return pct(a.committed, a.total) >= threshold.successRange[0];
+  });
+
+  // Dependency health status
+  const depHealthOverall: ThresholdStatus = (() => {
+    const blocked = data.dependencyHealth.find((d) => d.status === 'blocked');
+    if (blocked && blocked.count > 0) return 'danger';
+    const atRisk = data.dependencyHealth.find((d) => d.status === 'at_risk');
+    if (atRisk && atRisk.count > 0) return 'warning';
+    return 'success';
+  })();
 
   if (!data.cycle) {
     return (
-      <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-6 text-sm text-gray-700">
+      <div className="rounded border border-yellow-300 bg-yellow-50 p-6 text-sm text-textPrimary">
         No active Program Increment configured. Create or activate one in Admin
         Control Centre.
       </div>
     );
   }
 
-  const cycleIsActive = data.cycle.is_active;
-
-  const kpiItems: Array<{ label: string; value: number }> = [
-    { label: 'Total Features',                  value: data.summary.totalFeatures },
-    { label: 'Convergence %',                   value: convergencePct },
-    { label: 'High Criticality Dependencies',   value: data.summary.highCriticalityDependencies },
-    { label: 'Teams with Fresh Data',           value: data.summary.teamsWithFreshData },
-    { label: 'Total Dependencies',              value: data.summary.totalDependencies },
-    { label: 'Imports Today',                   value: data.summary.importsToday },
-  ];
+  const nextStage = PLANNING_STAGES.find((s) => s.id === stage + 1);
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
-        <PageHeader
-          title="Live Tracking Dashboard"
-          subtitle={
-            <>
-              <span className="text-gray-600">
-                Real-time visibility of planning progress, dependencies and readiness
-              </span>
-              <br />
-              <span className="font-semibold text-gray-700">PI:</span>{' '}
-              <span className="text-gray-700">
-                {data.cycle.name} ({new Date(data.cycle.start_date).toLocaleDateString('en-GB')} –{' '}
-                {new Date(data.cycle.end_date).toLocaleDateString('en-GB')})
-              </span>
-              <br />
-              <span className="text-xs text-gray-500">
-                Last refreshed at {new Date(data.refreshedAt).toLocaleTimeString('en-GB')}
-              </span>
-            </>
-          }
-          actions={
-            <>
-              <select
-                value={selectedArtId}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSelectedArtId(value);
-                  void refresh(value);
-                }}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
-              >
-                <option value="ALL">All ARTs</option>
-                {data.arts.map((art) => (
-                  <option key={art.id} value={art.id}>
-                    {art.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => void refresh(selectedArtId)}
-                className="rounded bg-royalRed px-3 py-1 text-sm text-white"
-              >
-                {loading ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </>
-          }
-        />
-      </section>
+      {/* Page header */}
+      <PageHeader
+        title="Live Tracking Dashboard"
+        subtitle={
+          <>
+            <span className="text-textMuted">
+              {data.cycle.name} · {new Date(data.cycle.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} –{' '}
+              {new Date(data.cycle.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+          </>
+        }
+      />
 
-      {/* KPI cards with coloured left borders */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {kpiItems.map(({ label, value }) => {
-          const colour = getKpiColour(label, value, {
-            convergencePct,
-            participatingTeams: data.summary.participatingTeams,
-            cycleIsActive,
-            teamsWithFreshData: data.summary.teamsWithFreshData,
-          });
+      {/* ── 1. Planning Stage pipeline ──────────────────────────────── */}
+      <section className="rounded border border-border bg-surface p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0">
+            {PLANNING_STAGES.map((s, i) => {
+              const isComplete = s.id < stage;
+              const isActive = s.id === stage;
+              const isFuture = s.id > stage;
 
-          return (
-            <article
-              key={label}
-              className="rounded-lg border border-gray-200 bg-white p-4"
-              style={{ borderLeft: `3px solid ${colour.border}` }}
-            >
-              <p className="text-xs uppercase text-gray-500">{label}</p>
-              <p
-                className="mt-2 text-3xl font-semibold"
-                style={{ color: colour.value }}
-              >
-                {label === 'Convergence %' ? `${value}%` : value}
-              </p>
-            </article>
-          );
-        })}
-      </section>
-
-      {/* Secondary KPI cards — neutral */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ['Total Stories',        data.summary.totalStories],
-          ['Participating Teams',  data.summary.participatingTeams],
-          ['Active Initiatives',   data.summary.activeInitiatives],
-        ].map(([label, value]) => (
-          <article
-            key={String(label)}
-            className="rounded-lg border border-gray-200 bg-white p-4"
-          >
-            <p className="text-xs uppercase text-gray-500">{label}</p>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
-          </article>
-        ))}
-      </section>
-
-      {/* ART Status tiles — with convergence badge */}
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-lg font-semibold">ART Status</h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {data.artTiles.map((tile) => {
-            const badge = convergenceBadge(tile.convergencePct, tile.features);
-
-            return (
-              <article
-                key={tile.artId}
-                className="rounded border border-gray-200 bg-gray-50 p-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold">{tile.artName}</h3>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
-                    Convergence {badge.label}
-                  </span>
+              return (
+                <div key={s.id} className="flex items-center">
+                  {i > 0 && (
+                    <div
+                      className={`h-0.5 w-6 sm:w-10 ${
+                        isComplete || isActive ? 'bg-royalRed' : 'bg-gray-200'
+                      }`}
+                    />
+                  )}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
+                        isComplete
+                          ? 'bg-royalRed text-white'
+                          : isActive
+                            ? 'bg-royalRed text-white ring-4 ring-red-200 animate-pulse'
+                            : 'border-2 border-surfaceSubtle bg-surfaceSubtle text-textMuted'
+                      }`}
+                      aria-label={`Stage ${s.id}: ${s.shortLabel}, ${
+                        isComplete ? 'complete' : isActive ? 'active' : 'upcoming'
+                      }`}
+                      role="img"
+                    >
+                      {s.id}
+                    </div>
+                    <span
+                      className={`mt-1 hidden text-[11px] sm:block ${
+                        isFuture ? 'text-textMuted' : 'text-textPrimary'
+                      }`}
+                    >
+                      {s.shortLabel}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-gray-700">
-                  <p>Initiatives: {tile.initiatives}</p>
-                  <p>Teams: {tile.teamsContributing}</p>
-                  <p>Features: {tile.features}</p>
-                  <p>Dependencies: {tile.dependencies}</p>
-                  <p className="col-span-2 text-red-700">
-                    High risk deps: {tile.unresolvedHighDependencies}
-                  </p>
-                </div>
-              </article>
-            );
-          })}
-          {!data.artTiles.length && (
-            <p className="text-sm text-gray-500">
-              No ART data found for this Program Increment.
+              );
+            })}
+          </div>
+          <div className="ml-auto hidden text-right text-sm md:block">
+            <p className="font-semibold text-textPrimary">
+              Stage {stage}: {PLANNING_STAGES[stage - 1]?.shortLabel}
             </p>
-          )}
+            {nextStage && (
+              <p className="text-xs text-textMuted">
+                Next: {nextStage.shortLabel}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">
-            Planning Convergence / Progress
-          </h2>
-          <div className="space-y-2">
-            {[
-              ['Draft',     data.convergence.draft,      STATUS_COLOURS.draft.bar],
-              ['Planned',   data.convergence.planned,    STATUS_COLOURS.planned.bar],
-              ['Committed', data.convergence.committed,  STATUS_COLOURS.committed.bar],
-            ].map(([label, count, color]) => (
-              <div key={String(label)}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{label}</span>
-                  <span>{count}</span>
-                </div>
-                <div className="h-3 rounded bg-gray-100">
-                  <div
-                    className={`h-3 rounded ${color}`}
-                    style={{
-                      width: `${Math.min(100, Number(count) * 8)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-sm text-gray-700">
-            {data.convergence.summary}
-          </p>
-        </article>
-
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">Sprint Distribution</h2>
-          <div className="space-y-2">
-            {data.sprintDistribution.map((sprint) => (
+      {/* ── 2. Overall convergence hero ─────────────────────────────── */}
+      <section className="rounded border border-border bg-surface p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex-1">
+            <p className="text-5xl font-medium text-textPrimary">{overallPct}%</p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
               <div
-                key={sprint.sprintId}
-                className="rounded border border-gray-200 p-2"
-              >
-                <p className="text-sm font-semibold">{sprint.sprintName}</p>
-                <p className="text-xs text-gray-500">{sprint.dateRange}</p>
-                <div className="mt-1 text-xs text-gray-700">
-                  Features: {sprint.featureCount} • Stories: {sprint.storyCount}
+                className={`h-full rounded-full ${
+                  overallStatus === 'success'
+                    ? 'bg-success'
+                    : overallStatus === 'warning'
+                      ? 'bg-warning'
+                      : 'bg-danger'
+                }`}
+                style={{ width: `${Math.min(100, overallPct)}%` }}
+              />
+            </div>
+            <p className="mt-1 text-sm text-textMuted">
+              {featuresWithSprint} of {totalFeatures} features committed
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-textMuted">
+              Stage {stage} target: {convergenceThresholds[stage]?.label ?? '—'}
+            </p>
+            <span className={`mt-1 inline-block ${statusPillClasses(overallStatus)}`}>
+              {statusLabel(overallStatus)}
+            </span>
+            <p className="mt-2 text-xs text-textMuted">
+              {getContextualReading('convergence', overallStatus, String(overallPct), String(stage))}
+            </p>
+          </div>
+        </div>
+        {(behindArts.length > 0 || onTrackArts.length > 0) && data.artConvergence.length > 1 && (
+          <p className="mt-3 text-xs text-textMuted">
+            {behindArts.length > 0 && (
+              <>
+                {behindArts.map((a) => a.shortName ?? a.name).join(', ')}{' '}
+                {behindArts.length === 1 ? 'is' : 'are'} pulling the figure down.{' '}
+              </>
+            )}
+            {onTrackArts.length > 0 && (
+              <>
+                {onTrackArts.map((a) => a.shortName ?? a.name).join(', ')}{' '}
+                {onTrackArts.length === 1 ? 'is' : 'are'} on track.
+              </>
+            )}
+          </p>
+        )}
+      </section>
+
+      {/* ── 3. ART health strip ─────────────────────────────────────── */}
+      <section className="flex flex-wrap gap-3">
+        {data.artConvergence.map((art) => {
+          const artPct = pct(art.committed, art.total);
+          const artStatus = getConvergenceStatus(artPct, stage);
+          const sc = STATUS_COLOUR[artStatus];
+
+          return (
+            <article
+              key={art.artId}
+              className={`flex-1 min-w-[200px] rounded border border-border bg-surface p-3 border-t-[3px] ${sc.border}`}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-textPrimary">
+                    {art.shortName ?? art.name}
+                  </p>
+                  {art.shortName && (
+                    <p className="text-xs text-textMuted">{art.name}</p>
+                  )}
                 </div>
-                <div className="mt-1 h-2 rounded bg-gray-100">
-                  <div
-                    className="h-2 rounded bg-royalRed"
-                    style={{
-                      width: `${Math.max(
-                        4,
-                        (sprint.featureCount / maxSprintCount) * 100
-                      )}%`,
-                    }}
+                <p className={`text-2xl font-medium ${sc.text}`}>{artPct}%</p>
+              </div>
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className={`h-full rounded-full ${
+                    artStatus === 'success'
+                      ? 'bg-success'
+                      : artStatus === 'warning'
+                        ? 'bg-warning'
+                        : 'bg-danger'
+                  }`}
+                  style={{ width: `${Math.min(100, artPct)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-textMuted">
+                {art.committed}/{art.total} features · {art.teamCount} teams
+              </p>
+              <span className={`mt-1 inline-block ${statusPillClasses(artStatus)}`}>
+                {statusLabel(artStatus)}
+              </span>
+            </article>
+          );
+        })}
+        {data.artConvergence.length === 0 && (
+          <p className="text-sm text-textMuted">No ART data for this PI.</p>
+        )}
+      </section>
+
+      {/* ── 4. Metrics strip ────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {/* High-criticality deps */}
+        <MetricCard
+          label="High-criticality deps"
+          value={highCritDeps.count}
+          sub={`${highCritDeps.blocked} blocked · ${highCritDeps.atRisk} at risk`}
+          status={depMetricStatus}
+          reading={getContextualReading('dependencies', depMetricStatus)}
+        />
+
+        {/* Parking lot */}
+        <MetricCard
+          label="Parking lot"
+          value={parkingLotCount}
+          sub={`Features without a sprint`}
+          status={parkingLotStatus}
+          reading={getContextualReading('parkingLot', parkingLotStatus)}
+        />
+
+        {/* Teams participating */}
+        <MetricCard
+          label="Teams participating"
+          value={data.teamCounts.participating}
+          sub={`of ${data.teamCounts.total} active teams`}
+          status={teamStatus}
+          reading={
+            teamStatus === 'danger'
+              ? `${data.teamCounts.total - data.teamCounts.participating} team(s) not yet assigned`
+              : 'All active teams assigned'
+          }
+        />
+
+        {/* Data freshness */}
+        <MetricCard
+          label="Data freshness"
+          value={freshnessLabel(data.lastImportCreatedAt)}
+          sub="Last successful import"
+          status={importStatus}
+          reading={getContextualReading('freshness', importStatus)}
+        />
+      </section>
+
+      {/* ── 5. Two-column: Sprint load + Dependency health ──────────── */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        {/* Sprint load chart (~60%) */}
+        <article className="rounded border border-border bg-surface p-4 xl:col-span-3">
+          <h2 className="mb-3 text-sm font-semibold text-textPrimary">
+            Sprint Load Distribution
+          </h2>
+          {sprintLoadData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={sprintLoadData} barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="sprintName"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
                   />
-                </div>
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip />
+                  <Legend
+                    verticalAlign="top"
+                    height={28}
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Bar
+                    dataKey="committed"
+                    stackId="a"
+                    fill="#16a34a"
+                    name="Committed"
+                    radius={[0, 0, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="planned"
+                    stackId="a"
+                    fill="#d97706"
+                    name="Planned"
+                    radius={[2, 2, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-2 text-xs text-textMuted">
+                {getContextualReading(
+                  'sprintLoad',
+                  sprintLoadStatus,
+                  heaviestSprint?.sprintName ?? '',
+                )}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-textMuted">No sprints configured.</p>
+          )}
+        </article>
+
+        {/* Dependency health (~40%) */}
+        <article className="rounded border border-border bg-surface p-4 xl:col-span-2">
+          <h2 className="mb-3 text-sm font-semibold text-textPrimary">
+            Dependency Health
+          </h2>
+          <ul className="space-y-2">
+            {data.dependencyHealth.map((row) => {
+              const meta = DEP_STATUS_META[row.status] ?? {
+                shape: '?',
+                label: row.status,
+                colour: 'text-textMuted',
+              };
+              return (
+                <li key={row.status} className="flex items-center gap-2 text-sm">
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block w-4 text-center text-base ${meta.colour}`}
+                  >
+                    {meta.shape}
+                  </span>
+                  <span className="sr-only">{meta.label}</span>
+                  <span className="flex-1 text-textPrimary">{meta.label}</span>
+                  <span className="font-medium text-textPrimary">{row.count}</span>
+                  {row.highCriticalityCount > 0 && (
+                    <span className="rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-700">
+                      {row.highCriticalityCount} high
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-3 text-xs text-textMuted">
+            {getContextualReading('dependencies', depHealthOverall)}
+          </p>
+        </article>
+      </section>
+
+      {/* ── 6. Concept tiles ────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Confidence Vote tile (static placeholder) */}
+        <ConceptualTile
+          title="Confidence Vote"
+          description="Team confidence in delivering the committed plan"
+        >
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-medium text-textPrimary">4.1</span>
+            <span className="text-sm text-textMuted">/ 5</span>
+            <span className="ml-1 text-warning" aria-label="4.1 out of 5 stars">
+              ★★★★☆
+            </span>
+          </div>
+          {/* Distribution bars */}
+          <div className="flex items-end gap-1">
+            {[
+              { score: 1, count: 1, colour: 'bg-danger' },
+              { score: 2, count: 2, colour: 'bg-danger' },
+              { score: 3, count: 4, colour: 'bg-warning' },
+              { score: 4, count: 12, colour: 'bg-success' },
+              { score: 5, count: 10, colour: 'bg-success' },
+            ].map((d) => (
+              <div key={d.score} className="flex flex-col items-center gap-0.5">
+                <div
+                  className={`w-6 rounded-sm ${d.colour}`}
+                  style={{ height: `${Math.max(4, d.count * 4)}px` }}
+                />
+                <span className="text-[11px] text-textMuted">{d.score}</span>
               </div>
             ))}
-            {!data.sprintDistribution.length && (
-              <p className="text-sm text-gray-500">
-                No sprints configured for this Program Increment.
-              </p>
-            )}
           </div>
-        </article>
-      </section>
+          <p className="text-xs text-textMuted">22 of 29 teams scored 4 or 5</p>
+        </ConceptualTile>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">
-            Dependency & Risk Overview
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2">
+        {/* PI Objectives tile (static placeholder) */}
+        <ConceptualTile
+          title="PI Objectives"
+          description="Committed and stretch objectives for this PI"
+        >
+          <div className="flex gap-4">
             <div>
-              <h3 className="mb-2 text-sm font-semibold">By Type</h3>
-              <ul className="space-y-1 text-sm">
-                {data.dependencyOverview.byType.map((item) => (
-                  <li key={item.type} className="flex justify-between">
-                    <span>{item.type}</span>
-                    <span>{item.count}</span>
-                  </li>
-                ))}
-              </ul>
+              <span className="text-2xl font-medium text-textPrimary">12</span>
+              <span className="ml-1 text-xs text-textMuted">committed</span>
             </div>
             <div>
-              <h3 className="mb-2 text-sm font-semibold">By Criticality</h3>
-              <ul className="space-y-1 text-sm">
-                {data.dependencyOverview.byCriticality.map((item) => (
-                  <li key={item.criticality} className="flex justify-between">
-                    <span>{item.criticality}</span>
-                    <span>{item.count}</span>
-                  </li>
-                ))}
-              </ul>
+              <span className="text-2xl font-medium text-textPrimary">4</span>
+              <span className="ml-1 text-xs text-textMuted">stretch</span>
+            </div>
+            <div className="ml-auto text-right">
+              <span className="text-lg font-medium text-textPrimary">7.4</span>
+              <span className="ml-1 text-xs text-textMuted">avg BV</span>
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="mb-1 text-sm font-semibold">
-              Top dependency owners
-            </h3>
-            <ul className="space-y-1 text-sm text-gray-700">
-              {data.dependencyOverview.topOwners.map((owner) => (
-                <li key={owner.owner} className="flex justify-between">
-                  <span>{owner.owner}</span>
-                  <span>{owner.count}</span>
-                </li>
-              ))}
-              {!data.dependencyOverview.topOwners.length && (
-                <li className="text-gray-500">No owner data available.</li>
-              )}
-            </ul>
-          </div>
-        </article>
-
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">
-            Import Freshness / Snapshot Health
-          </h2>
-          <p className="text-sm text-gray-700">
-            Latest import:{' '}
-            {data.importFreshness.latestImportAt
-              ? new Date(data.importFreshness.latestImportAt).toLocaleString(
-                  'en-GB'
-                )
-              : 'No imports yet'}
-          </p>
-          <p className="text-sm text-gray-700">
-            Imported snapshots: {data.importFreshness.importedSnapshots} •
-            Rolled back: {data.importFreshness.rolledBackSnapshots}
-          </p>
-          <p className="text-sm text-gray-700">
-            Teams with no import: {data.importFreshness.teamsNoImport} • Stale
-            teams: {data.importFreshness.teamsStale}
-          </p>
-
-          <div className="mt-3 max-h-48 overflow-auto rounded border border-gray-200">
-            <table className="min-w-full text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-1 text-left">Team</th>
-                  <th className="px-2 py-1 text-left">Latest import</th>
-                  <th className="px-2 py-1 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.importFreshness.teamStatuses.map((row) => (
-                  <tr key={row.team} className="border-t">
-                    <td className="px-2 py-1">{row.team}</td>
-                    <td className="px-2 py-1">
-                      {row.latestImportAt
-                        ? new Date(row.latestImportAt).toLocaleString('en-GB')
-                        : '-'}
-                    </td>
-                    <td className="px-2 py-1">{row.freshness}</td>
-                  </tr>
-                ))}
-                {!data.importFreshness.teamStatuses.length && (
-                  <tr>
-                    <td className="px-2 py-2 text-gray-500" colSpan={3}>
-                      No participating team freshness data yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">Activity Feed</h2>
-          <ul className="max-h-64 space-y-2 overflow-auto text-sm">
-            {data.activity.map((event) => (
-              <li key={event.id} className="rounded border border-gray-200 p-2">
-                <p className="text-xs text-gray-500">
-                  {new Date(event.timestamp).toLocaleString('en-GB')} •{' '}
-                  {event.eventType}
-                </p>
-                <p className="text-gray-800">{event.message}</p>
+          <ul className="space-y-1.5 text-xs">
+            {[
+              { title: 'Complete payment migration to new gateway', bv: 9, type: 'committed' as const },
+              { title: 'Launch self-service returns portal', bv: 8, type: 'committed' as const },
+              { title: 'Reduce P1 incidents by 30%', bv: 7, type: 'committed' as const },
+              { title: 'Explore AI-assisted sorting predictions', bv: 5, type: 'stretch' as const },
+            ].map((obj) => (
+              <li key={obj.title} className="flex items-center gap-2">
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    obj.type === 'committed'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-gray-100 text-textMuted'
+                  }`}
+                >
+                  BV {obj.bv}
+                </span>
+                <span className="truncate text-textPrimary">{obj.title}</span>
+                <span
+                  className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                    obj.type === 'committed'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-gray-100 text-textMuted'
+                  }`}
+                >
+                  {obj.type === 'committed' ? 'Committed' : 'Stretch'}
+                </span>
               </li>
             ))}
-            {!data.activity.length && (
-              <li className="text-gray-500">
-                No activity events recorded for this Program Increment.
-              </li>
-            )}
           </ul>
-        </article>
-
-        <article className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">Attention Items</h2>
-          <ul className="space-y-2 text-sm">
-            {data.attentionItems.map((item, index) => (
-              <li
-                key={`${item.message}-${index}`}
-                className={`rounded border p-2 ${
-                  item.severity === 'high'
-                    ? 'border-red-200 bg-red-50 text-red-700'
-                    : 'border-amber-200 bg-amber-50 text-amber-800'
-                }`}
-              >
-                {item.message}
-              </li>
-            ))}
-            {!data.attentionItems.length && (
-              <li className="rounded border border-green-200 bg-green-50 p-2 text-green-700">
-                No immediate attention items.
-              </li>
-            )}
-          </ul>
-        </article>
+        </ConceptualTile>
       </section>
     </div>
+  );
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function MetricCard({
+  label,
+  value,
+  sub,
+  status,
+  reading,
+}: {
+  label: string;
+  value: number | string;
+  sub: string;
+  status: ThresholdStatus;
+  reading: string;
+}) {
+  const sc = STATUS_COLOUR[status];
+  return (
+    <article
+      className={`rounded border border-border bg-surface p-3 border-t-[3px] ${sc.border}`}
+    >
+      <p className="text-xs text-textMuted">{label}</p>
+      <p className="mt-1 text-2xl font-medium text-textPrimary">{value}</p>
+      <p className="text-xs text-textMuted">{sub}</p>
+      <p className="mt-2 text-xs text-textMuted">{reading}</p>
+    </article>
   );
 }

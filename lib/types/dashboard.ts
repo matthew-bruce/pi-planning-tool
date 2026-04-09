@@ -71,4 +71,28 @@ export type DashboardData = {
     severity: 'high' | 'medium';
     message: string;
   }>;
+  artConvergence: Array<{
+    artId: string;
+    shortName: string | null;
+    name: string;
+    committed: number;
+    total: number;
+    teamCount: number;
+  }>;
+  sprintLoad: Array<{
+    sprintName: string;
+    sprintNumber: number;
+    committed: number;
+    planned: number;
+  }>;
+  dependencyHealth: Array<{
+    status: string;
+    count: number;
+    highCriticalityCount: number;
+  }>;
+  lastImportCreatedAt: string | null;
+  teamCounts: {
+    participating: number;
+    total: number;
+  };
 };

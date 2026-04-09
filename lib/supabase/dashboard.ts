@@ -114,6 +114,222 @@ function freshnessOf(latestImportAt: string | null): 'Fresh' | 'Stale' | 'Missin
 // The canonical implementation lives in lib/supabase/shared.ts.
 export { getActiveOrSelectedProgramIncrement };
 
+// ── New queries for rebuilt dashboard ───────────────────────────────────────
+
+export type ArtConvergenceRow = {
+  artId: string;
+  shortName: string | null;
+  name: string;
+  committed: number;
+  total: number;
+  teamCount: number;
+};
+
+export async function getArtConvergence(
+  piId: string,
+): Promise<ArtConvergenceRow[]> {
+  const supabase = getSupabaseServerClient();
+
+  const [
+    { data: arts },
+    { data: assignments },
+    { data: initiatives },
+    { data: features },
+  ] = await Promise.all([
+    supabase
+      .from('arts')
+      .select('id, name, short_name, display_order')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('name'),
+    supabase
+      .from('team_art_assignments')
+      .select('art_id, team_id')
+      .eq('planning_cycle_id', piId),
+    supabase
+      .from('initiatives')
+      .select('id, art_id')
+      .eq('planning_cycle_id', piId)
+      .eq('is_active', true),
+    supabase
+      .from('features')
+      .select('id, initiative_id, sprint_id')
+      .eq('planning_cycle_id', piId),
+  ]);
+
+  const artRows = (arts ?? []) as Array<{
+    id: string;
+    name: string;
+    short_name: string | null;
+    display_order: number | null;
+  }>;
+  const initiativeRows = (initiatives ?? []) as Array<{
+    id: string;
+    art_id: string | null;
+  }>;
+  const featureRows = (features ?? []) as Array<{
+    id: string;
+    initiative_id: string | null;
+    sprint_id: string | null;
+  }>;
+  const assignmentRows = (assignments ?? []) as Array<{
+    art_id: string;
+    team_id: string;
+  }>;
+
+  return artRows.map((art) => {
+    const artInitiativeIds = new Set(
+      initiativeRows.filter((i) => i.art_id === art.id).map((i) => i.id),
+    );
+    const artFeatures = featureRows.filter(
+      (f) => !!f.initiative_id && artInitiativeIds.has(f.initiative_id),
+    );
+    const committedCount = artFeatures.filter((f) => f.sprint_id !== null).length;
+    const teamCount = new Set(
+      assignmentRows.filter((a) => a.art_id === art.id).map((a) => a.team_id),
+    ).size;
+
+    return {
+      artId: art.id,
+      shortName: art.short_name,
+      name: art.name,
+      committed: committedCount,
+      total: artFeatures.length,
+      teamCount,
+    };
+  });
+}
+
+export type SprintLoadRow = {
+  sprintName: string;
+  sprintNumber: number;
+  committed: number;
+  planned: number;
+};
+
+export async function getSprintLoad(
+  piId: string,
+): Promise<SprintLoadRow[]> {
+  const supabase = getSupabaseServerClient();
+
+  const [{ data: sprints }, { data: features }] = await Promise.all([
+    supabase
+      .from('sprints')
+      .select('id, name, sprint_number')
+      .eq('planning_cycle_id', piId)
+      .order('sprint_number', { ascending: true }),
+    supabase
+      .from('features')
+      .select('id, sprint_id, commitment_status')
+      .eq('planning_cycle_id', piId),
+  ]);
+
+  const sprintRows = (sprints ?? []) as Array<{
+    id: string;
+    name: string;
+    sprint_number: number;
+  }>;
+  const featureRows = (features ?? []) as Array<{
+    id: string;
+    sprint_id: string | null;
+    commitment_status: string | null;
+  }>;
+
+  return sprintRows.map((sprint) => {
+    const sprintFeatures = featureRows.filter((f) => f.sprint_id === sprint.id);
+    return {
+      sprintName: sprint.name,
+      sprintNumber: sprint.sprint_number,
+      committed: sprintFeatures.filter(
+        (f) => (f.commitment_status ?? '').toLowerCase() === 'committed',
+      ).length,
+      planned: sprintFeatures.filter(
+        (f) => (f.commitment_status ?? '').toLowerCase() === 'planned',
+      ).length,
+    };
+  });
+}
+
+export type DependencyHealthRow = {
+  status: string;
+  count: number;
+  highCriticalityCount: number;
+};
+
+export async function getDependencyHealth(
+  piId: string,
+): Promise<DependencyHealthRow[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: deps } = await supabase
+    .from('dependencies')
+    .select('id, dependency_status, dependency_criticality')
+    .eq('planning_cycle_id', piId);
+
+  const depRows = (deps ?? []) as Array<{
+    id: string;
+    dependency_status: string | null;
+    dependency_criticality: string | null;
+  }>;
+
+  const statusBuckets = ['blocked', 'at_risk', 'open', 'resolved', 'removed'];
+  return statusBuckets.map((status) => {
+    const matching = depRows.filter(
+      (d) => (d.dependency_status ?? '').toLowerCase() === status,
+    );
+    return {
+      status,
+      count: matching.length,
+      highCriticalityCount: matching.filter(
+        (d) => (d.dependency_criticality ?? '').toLowerCase() === 'high',
+      ).length,
+    };
+  });
+}
+
+export async function getImportFreshnessTimestamp(
+  piId: string,
+): Promise<string | null> {
+  const supabase = getSupabaseServerClient();
+
+  const { data } = await supabase
+    .from('import_snapshots')
+    .select('created_at')
+    .eq('planning_cycle_id', piId)
+    .eq('status', 'imported')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return (data as { created_at: string } | null)?.created_at ?? null;
+}
+
+export async function getTotalTeamCount(
+  piId: string,
+): Promise<{ participating: number; total: number }> {
+  const supabase = getSupabaseServerClient();
+
+  const [{ data: assignments }, { data: teams }] = await Promise.all([
+    supabase
+      .from('team_art_assignments')
+      .select('team_id')
+      .eq('planning_cycle_id', piId),
+    supabase
+      .from('teams')
+      .select('id')
+      .eq('is_active', true),
+  ]);
+
+  const assignedTeamIds = new Set(
+    ((assignments ?? []) as Array<{ team_id: string }>).map((a) => a.team_id),
+  );
+  const totalTeams = ((teams ?? []) as Array<{ id: string }>).length;
+
+  return { participating: assignedTeamIds.size, total: totalTeams };
+}
+
+// ── Legacy queries (still used by existing API route) ──────────────────────
+
 export async function getDashboardSummary(
   cycleId: string,
   selectedArtId?: string | null
@@ -746,6 +962,11 @@ export async function getDashboardData(input: {
           message: 'No active planning cycle configured.',
         },
       ],
+      artConvergence: [],
+      sprintLoad: [],
+      dependencyHealth: [],
+      lastImportCreatedAt: null,
+      teamCounts: { participating: 0, total: 0 },
     };
   }
 
@@ -758,6 +979,11 @@ export async function getDashboardData(input: {
     activity,
     allFeaturesResult,
     cycleInitiativesResult,
+    artConvergence,
+    sprintLoad,
+    dependencyHealth,
+    lastImportCreatedAt,
+    teamCounts,
   ] = await Promise.all([
     getDashboardSummary(cycle.id, selectedArtId),
     getArtStatusTiles(cycle.id, selectedArtId),
@@ -773,6 +999,11 @@ export async function getDashboardData(input: {
       .from('initiatives')
       .select('id,art_id,planning_cycle_id')
       .eq('planning_cycle_id', cycle.id),
+    getArtConvergence(cycle.id),
+    getSprintLoad(cycle.id),
+    getDependencyHealth(cycle.id),
+    getImportFreshnessTimestamp(cycle.id),
+    getTotalTeamCount(cycle.id),
   ]);
 
   const allFeatures = (allFeaturesResult.data ?? []) as Feature[];
@@ -837,5 +1068,10 @@ export async function getDashboardData(input: {
     importFreshness,
     activity,
     attentionItems,
+    artConvergence,
+    sprintLoad,
+    dependencyHealth,
+    lastImportCreatedAt,
+    teamCounts,
   };
 }
