@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
 } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { setProgramIncrementStage } from '@/app/admin/actions';
 import {
   PLANNING_STAGES,
@@ -122,33 +123,12 @@ export function PlanningStagePill({ cycleId, currentStage }: Props) {
     [cycleId, optimisticStage, closeMenu, setOptimisticStage],
   );
 
-  // ── Pill visual — matches ART selector button style ──
-  const pillStyleEmpty = {
-    backgroundColor: 'transparent',
-    color: '#ffffff',
-    borderStyle: 'dashed' as const,
-    borderColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    transition:
-      'background-color 120ms ease, color 120ms ease, border-color 120ms ease',
-  };
-
-  const pillStyleActive = {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    color: '#ffffff',
-    borderStyle: 'solid' as const,
-    borderColor: 'rgba(255,255,255,0.35)',
-    borderWidth: 1,
-    transition:
-      'background-color 120ms ease, color 120ms ease, border-color 120ms ease',
-  };
-
   const label = stageDef
-    ? `Stage ${stageDef.id}: ${stageDef.shortLabel}`
-    : 'Set planning stage';
+    ? `Stage: ${stageDef.id} · ${stageDef.shortLabel}`
+    : 'Set stage';
 
   return (
-    <div className="relative inline-flex flex-col items-start">
+    <div className="relative inline-flex flex-col items-end">
       <button
         ref={buttonRef}
         type="button"
@@ -161,10 +141,16 @@ export function PlanningStagePill({ cycleId, currentStage }: Props) {
         }
         disabled={!cycleId || isPending}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="rounded-full px-3 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60"
-        style={stageDef ? pillStyleActive : pillStyleEmpty}
+        className={[
+          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-white',
+          'hover:bg-white hover:text-royalRed hover:border-white',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+          'disabled:opacity-60 transition-colors',
+          stageDef ? 'border-white/60' : 'border-dashed border-white/40',
+        ].join(' ')}
       >
         {label}
+        <ChevronDown size={13} className="shrink-0 opacity-70" />
       </button>
 
       {error && (
@@ -181,7 +167,7 @@ export function PlanningStagePill({ cycleId, currentStage }: Props) {
           ref={menuRef}
           role="menu"
           aria-label="Planning stages"
-          className="absolute left-0 top-full z-30 mt-1 min-w-[260px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+          className="absolute right-0 top-full z-30 mt-1 min-w-[260px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
         >
           <ul className="py-1">
             {PLANNING_STAGES.map((stage, idx) => {

@@ -475,10 +475,7 @@ export function DependenciesGraph({ initialData }: Props) {
                       <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: TOKENS.textMuted, marginBottom: 4 }}>
                         Status
                       </div>
-                      <div
-                        className="flex rounded-lg overflow-hidden"
-                        style={{ border: `1px solid ${TOKENS.border}` }}
-                      >
+                      <div className="flex flex-wrap gap-1">
                         {ALL_STATUSES.map((s) => {
                           const sConf = STATUS_CONFIG[s];
                           const isActive = effectiveStatus === s;
@@ -486,23 +483,16 @@ export function DependenciesGraph({ initialData }: Props) {
                             <button
                               key={s}
                               onClick={() => handleStatusPreview(edge.id, s)}
-                              className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs transition-colors"
+                              className="rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
                               style={{
-                                background: isActive ? TOKENS.surface : 'transparent',
-                                boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                                color: isActive ? TOKENS.textPrimary : TOKENS.textMuted,
-                                fontWeight: isActive ? 500 : 400,
+                                background: isActive ? sConf.colour + '20' : TOKENS.surface,
+                                color: isActive ? sConf.colour : TOKENS.textMuted,
+                                border: isActive
+                                  ? `1px solid ${sConf.colour}50`
+                                  : `1px solid ${TOKENS.border}`,
                               }}
                             >
-                              <span style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: sConf.colour,
-                                display: 'inline-block',
-                                flexShrink: 0,
-                              }} />
-                              <span className="hidden xl:inline">{sConf.label}</span>
+                              {sConf.label}
                             </button>
                           );
                         })}

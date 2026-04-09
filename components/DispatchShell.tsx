@@ -13,6 +13,8 @@ import {
   GitBranch,
   HelpCircle,
   LayoutGrid,
+  Lock,
+  LockOpen,
   Settings,
   Users,
 } from 'lucide-react';
@@ -212,6 +214,43 @@ export function DispatchShell({
           })}
         </nav>
 
+        {/* Sync mode indicator — above config section */}
+        <div className="shrink-0 pt-3">
+          {collapsed ? (
+            <div
+              title={syncMode === 'read_write' ? 'Read + Write mode' : 'Read Only mode'}
+              className="mb-1 flex justify-center"
+            >
+              {syncMode === 'read_write' ? (
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-royalYellow">
+                  <LockOpen size={12} style={{ color: '#111827' }} />
+                </span>
+              ) : (
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 text-gray-400">
+                  <Lock size={12} />
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className={[
+              'mb-2 flex items-center gap-2 rounded border px-3 py-1.5',
+              syncMode === 'read_write' ? 'border-amber-200 bg-amber-50' : 'border-gray-200',
+            ].join(' ')}>
+              {syncMode === 'read_write' ? (
+                <>
+                  <LockOpen size={13} className="shrink-0 text-amber-600" />
+                  <span className="text-xs font-medium text-amber-700">Read + Write</span>
+                </>
+              ) : (
+                <>
+                  <Lock size={13} className="shrink-0 text-gray-400" />
+                  <span className="text-xs text-gray-500">Read Only</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Config items — pinned to bottom */}
         <div className="mt-auto shrink-0 pt-3">
           {!collapsed && (
@@ -299,7 +338,7 @@ export function DispatchShell({
 
         {/* Planning header — royalRed background */}
         {showPlanningHeader && (
-          <header className="bg-royalRed relative flex flex-wrap items-center gap-4 overflow-hidden p-4">
+          <header className="bg-royalRed relative flex flex-wrap items-center gap-4 p-4">
             {/* Diagonal stripe watermark */}
             <div
               className="pointer-events-none absolute right-0 top-0 h-full overflow-hidden"
@@ -354,20 +393,9 @@ export function DispatchShell({
                 ))}
               </div>
 
-              {/* Planning Stage pill — ambient context on every planning page */}
-              <PlanningStagePill cycleId={cycleId} currentStage={currentStage} />
-
-              {/* Sync mode pill — right-aligned */}
+              {/* Planning Stage pill — right-aligned, visually distinct from ART pills */}
               <div className="ml-auto">
-              {syncMode === 'read_write' ? (
-                <span className="rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: '#FDDD1C', color: '#111827' }}>
-                  Read + Write
-                </span>
-              ) : (
-                <span className="rounded-full border px-2.5 py-0.5 text-xs" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)' }}>
-                  Read Only
-                </span>
-              )}
+                <PlanningStagePill cycleId={cycleId} currentStage={currentStage} />
               </div>
             </div>
           </header>
