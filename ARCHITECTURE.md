@@ -220,7 +220,7 @@ DispatchShell (mounts on all pages)
 | `snapshot_features` | Raw imported feature rows (immutable history) |
 | `snapshot_stories` | Raw imported story rows |
 | `snapshot_dependencies` | Raw imported dependency rows |
-| `activity_events` | Event log per PI (powers Live Tracking Dashboard feed) |
+| `activity_events` | Event log per PI (powers Live Tracking Dashboard feed). `metadata` jsonb column carries structured payload — e.g. `{ from_stage, to_stage, stage_name }` for `stage_changed` events. |
 
 ### PI Naming Conventions
 
@@ -294,18 +294,20 @@ Loaded in Supabase against Demo PI (`cc4d9336-8c6d-448a-80ed-9a4474e2a8a0`):
 ## UI Architecture
 
 ### Planning Header (red bar, all planning pages)
-Contains: Royal Mail logo area (sidebar), ART selector buttons, **Planning Stage pill**, Demo chip.
-Does NOT contain: Card view toggle (moved to filter row).
+Contains: ART selector buttons (left), **Planning Stage pill** (right, `ml-auto`), Demo chip.
+Does NOT contain: Card view toggle (moved to filter row), sync mode indicator (moved to sidebar).
 
 ### Planning Stage
 The facilitator sets the current stage from a pill in the planning header on
 every planning page. Six fixed, ordered stages are defined in
 `lib/planning/stages.ts` (single source of truth). The pill
-(`components/planning/PlanningStagePill.tsx`) is one component, one behaviour
-for everyone in MVP1 — no separate facilitator affordance. It matches the
-ART selector button style (rounded, white on translucent white), opens a
-menu with all 6 stages, supports keyboard navigation (Tab/Enter/Arrow/Escape),
-and does an optimistic UI update with inline error rollback.
+(`components/planning/PlanningStagePill.tsx`) is right-aligned in the header
+(`ml-auto`), uses an **outlined** style (transparent background, white border,
+white text, `hover:bg-white hover:text-royalRed`) — visually distinct from the
+filled ART selector pills. Label format: `Stage: N · ShortLabel ▾`. Opens a
+dropdown (right-aligned, unclipped — header has no `overflow-hidden`) listing
+all 6 stages with a checkmark on the current one. Supports keyboard navigation
+(Tab/Enter/Arrow/Escape) and does an optimistic UI update with inline error rollback.
 
 Selecting a stage calls the `setProgramIncrementStage` server action in
 `app/admin/actions.ts`. The action writes `planning_cycles.current_stage`
@@ -331,6 +333,7 @@ server component.
 - Collapsible/expandable — state persisted to localStorage
 - Collapsed: 52px, icons only with tooltips
 - Expanded: 180px, icons + labels
+- **Sync mode indicator** sits between the nav links and the config section, separated by a thin divider (`border-t border-gray-100`). Display-only — `Lock` icon (Read Only) or `LockOpen` icon (Read+Write), `textMuted` colour, no click affordance in MVP1. Collapsed: icon + tooltip only.
 - Config section (Demo Mode, Admin, Help) pinned to bottom via mt-auto
 
 ### Activity Feed Panel

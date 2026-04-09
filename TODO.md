@@ -11,7 +11,7 @@
 
 Active work — tackle these before anything else.
 
-- [ ] **Review `feature/consolidate-all-features` on Vercel preview** — branch consolidates card styling, dependencies redesign + sync mode pill, and Planning Stage pill. Pending preview review before merge to main. Do NOT merge to main until Vercel preview confirmed.
+- [ ] **Reality reconciliation pass** — audit ARCHITECTURE.md and TODO.md against actual codebase state before Dashboard Phase 1 build begins
 
 - [x] Schema audit — complete. Phase 1 and Phase 2 migration tasks defined below.
 - [x] **Schema Phase 1** — additive changes only — complete
@@ -45,10 +45,13 @@ Active work — tackle these before anything else.
 - [x] 8 parking lot features added to Demo PI
 - [x] **Team Planning Room — connected to Supabase** (stories-first, server component pattern, ART switching, Parking Lot column, Sorting Frame design alignment)
 - [x] **Dependencies Near You — connected to Supabase** (reactflow graph, 27 real deps, 11 external nodes, dagre LR layout, ART filter, node click side panel)
+- [x] **Dependencies graph visual redesign** — status-coloured edges, criticality stroke weight, status legend, external nodes, click-to-side-panel with dependency detail and status preview pills
+- [x] **Card styling consistency** — `components/ui/` shared library (FeatureCard, FeatureCardStatic, StatusPill, StatusDot, Highlight, WarningBanner, SprintHeader, EmptyCell, PageHeader), token adoption across all pages
+- [x] **Planning Stage indicator live** — `PlanningStagePill` in planning header (right-aligned, outlined style, `Stage: N · Label` format, dropdown unclipped), 6 stages in `lib/planning/stages.ts`, optimistic update + rollback
+- [x] **Sync mode indicator moved to sidebar** — display-only `Lock`/`LockOpen` icon below nav links, above config section; removed from planning header
 - [ ] Demo Mode guard — simulation ticks should not fire when Supabase has real data for the active PI
 - [ ] Team Planning Room — design consistency pass (visual alignment with Sorting Frame is approximate, not complete — deferred)
 - [ ] UI batch 2 fixes — in progress via Claude Code
-- [x] **Design system Phase 1 consolidation** — `components/ui/` library created (FeatureCard, FeatureCardStatic, StatusPill, StatusDot, Highlight, WarningBanner, SprintHeader, EmptyCell, PageHeader), token adoption, TeamPlanningBoard full FeatureCard parity. See DESIGN_SYSTEM.md for full change log.
 
 ---
 
