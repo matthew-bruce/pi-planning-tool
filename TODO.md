@@ -253,15 +253,6 @@ Use **Opus 4.6** for this task — significant multi-file reasoning required.
   - 6 fixed stages in `lib/planning/stages.ts`, freely changeable, no workflow gates
   - Stored on `planning_cycles.current_stage` (SMALLINT nullable, 1..6)
   - Stage changes emit `stage_changed` activity_events rows with reversal-aware 60s debounce
-  - Prerequisite for the Live Tracking Dashboard redesign (DASHBOARD_SPEC.md)
-
-- [ ] **Breadcrumb — stage history table was considered and rejected.**
-  Stage changes are recorded via `activity_events` rows with `event_type`
-  `'stage_changed'`. A separate history/audit table was considered but
-  rejected as over-engineering — the activity feed already provides a
-  timestamped, filterable, user-visible record of room events, and nothing
-  in MVP1 needs a structured stage-transition query. If a future feature
-  needs one, reconsider at that point.
 
 - [ ] **Planning Stage — contextual app behaviour (future phase)**
   - Sorting Frame, Dashboard, Dependencies all adapt per stage
