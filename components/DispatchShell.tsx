@@ -60,9 +60,11 @@ export function DispatchShell({
 
   // Initialise to expanded so server render and initial client hydration agree.
   // The useEffect below reads localStorage + screen width after hydration.
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile,  setIsMobile]  = useState(false);
-  const [syncMode,  setSyncMode]  = useState<'read_only' | 'read_write'>('read_only');
+  const [collapsed,   setCollapsed]   = useState(false);
+  const [isMobile,    setIsMobile]    = useState(false);
+  const [syncMode,    setSyncMode]    = useState<'read_only' | 'read_write'>('read_only');
+  // Defer ART pill rendering until after client hydration to prevent flash.
+  const [hasMounted,  setHasMounted]  = useState(false);
 
   const {
     arts,
@@ -75,12 +77,14 @@ export function DispatchShell({
   } = useDispatchStore();
 
   // Restore preference from localStorage, enforce collapsed on mobile.
+  // Also marks hydration complete so ART pills can render from store state.
   useEffect(() => {
     const mobile = window.innerWidth < 768;
     setIsMobile(mobile);
     setCollapsed(
       mobile ? true : localStorage.getItem('dispatch_nav_collapsed') === 'true'
     );
+    setHasMounted(true);
   }, []);
 
   // Keep mobile state in sync on resize.
@@ -361,22 +365,30 @@ export function DispatchShell({
 
             {/* Header controls */}
             <div className="relative flex flex-wrap items-center gap-4 w-full" style={{ zIndex: 1 }}>
-              {/* ART selector */}
+              {/* ART selector — skeletons shown until store has hydrated */}
               <div className="flex items-center gap-2">
-                {arts.map((art) => (
-                  <button
-                    key={art.id}
-                    onClick={() => setSelectedArtId(art.id)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      selectedArtId === art.id
-                        ? 'bg-white text-royalRed border-white'
-                        : 'bg-transparent text-white border-white/25'
-                    }`}
-                    style={{ transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }}
-                  >
-                    {art.name}
-                  </button>
-                ))}
+                {!hasMounted ? (
+                  <>
+                    <div className="h-8 w-24 animate-pulse rounded-full bg-white/20" />
+                    <div className="h-8 w-28 animate-pulse rounded-full bg-white/20" />
+                    <div className="h-8 w-20 animate-pulse rounded-full bg-white/20" />
+                  </>
+                ) : (
+                  arts.map((art) => (
+                    <button
+                      key={art.id}
+                      onClick={() => setSelectedArtId(art.id)}
+                      className={`rounded-full border px-3 py-1 text-sm ${
+                        selectedArtId === art.id
+                          ? 'bg-white text-royalRed border-white'
+                          : 'bg-transparent text-white border-white/25'
+                      }`}
+                      style={{ transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease' }}
+                    >
+                      {art.name}
+                    </button>
+                  ))
+                )}
               </div>
 
               {/* Planning Stage pill — right-aligned, visually distinct from ART pills */}

@@ -40,31 +40,74 @@ function statusPillClasses(status: ThresholdStatus): string {
   return `${s.bg} ${s.text} rounded-full px-2 py-0.5 text-xs font-medium`;
 }
 
-function statusLabel(status: ThresholdStatus): string {
+/** Directional convergence label — never generic "Watch". */
+function getConvergenceLabel(status: ThresholdStatus, pct: number, stage: number): string {
   if (status === 'success') return 'On track';
-  if (status === 'warning') return 'Watch';
-  return 'Behind';
+  if (stage === 1 && pct > convergenceThresholds[1].successRange[1]) return 'Above target';
+  return 'Behind target';
 }
 
 function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
 }
 
-function freshnessStatus(lastImport: string | null): ThresholdStatus {
-  if (!lastImport) return 'danger';
-  const mins = (Date.now() - new Date(lastImport).getTime()) / 60_000;
-  if (mins <= 15) return 'success';
-  if (mins <= 60) return 'warning';
-  return 'danger';
-}
+function getFreshnessCard(
+  lastImport: string | null,
+  stage: number,
+): { status: ThresholdStatus; isNeutral: boolean; value: string; sub: string; reading: string } {
+  const isPostEvent = stage === 6;
 
-function freshnessLabel(lastImport: string | null): string {
-  if (!lastImport) return 'No imports';
-  const mins = Math.round((Date.now() - new Date(lastImport).getTime()) / 60_000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  return `${hrs}h ago`;
+  if (!lastImport) {
+    if (isPostEvent) {
+      return {
+        status: 'success',
+        isNeutral: true,
+        value: 'No imports',
+        sub: 'Event complete — import history only',
+        reading: '',
+      };
+    }
+    return {
+      status: 'danger',
+      isNeutral: false,
+      value: 'No imports',
+      sub: 'Last successful import',
+      reading: getContextualReading('freshness', 'danger'),
+    };
+  }
+
+  const mins = (Date.now() - new Date(lastImport).getTime()) / 60_000;
+  const roundedMins = Math.round(mins);
+  const valueStr =
+    roundedMins < 1
+      ? 'Just now'
+      : roundedMins < 60
+        ? `${roundedMins}m ago`
+        : `${Math.round(roundedMins / 60)}h ago`;
+
+  if (isPostEvent) {
+    const dateStr = new Date(lastImport).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return {
+      status: 'success',
+      isNeutral: true,
+      value: valueStr,
+      sub: `Last import: ${dateStr}`,
+      reading: 'Event complete — import history only.',
+    };
+  }
+
+  const status: ThresholdStatus = mins <= 15 ? 'success' : mins <= 60 ? 'warning' : 'danger';
+  return {
+    status,
+    isNeutral: false,
+    value: valueStr,
+    sub: 'Last successful import',
+    reading: getContextualReading('freshness', status),
+  };
 }
 
 function getSprintMedian(loads: number[]): number {
@@ -146,7 +189,7 @@ export function LiveDashboard({ initialData }: Props) {
   const teamStatus: ThresholdStatus =
     data.teamCounts.participating < data.teamCounts.total ? 'danger' : 'success';
 
-  const importStatus = freshnessStatus(data.lastImportCreatedAt);
+  const freshnessCard = getFreshnessCard(data.lastImportCreatedAt, stage);
 
   // Sprint load chart + median analysis
   const sprintLoadData = data.sprintLoad;
@@ -199,7 +242,7 @@ export function LiveDashboard({ initialData }: Props) {
   const nextStage = PLANNING_STAGES.find((s) => s.id === stage + 1);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Page header */}
       <PageHeader
         title="Live Tracking Dashboard"
@@ -298,7 +341,7 @@ export function LiveDashboard({ initialData }: Props) {
               Stage {stage} target: {convergenceThresholds[stage]?.label ?? '—'}
             </p>
             <span className={`mt-1 inline-block ${statusPillClasses(overallStatus)}`}>
-              {statusLabel(overallStatus)}
+              {getConvergenceLabel(overallStatus, overallPct, stage)}
             </span>
             <p className="mt-2 text-xs text-textMuted">
               {getContextualReading('convergence', overallStatus, String(overallPct), String(stage))}
@@ -326,14 +369,17 @@ export function LiveDashboard({ initialData }: Props) {
       {/* ── 3. ART health strip ─────────────────────────────────────── */}
       <section className="flex flex-wrap gap-3">
         {data.artConvergence.map((art) => {
+          const hasData = art.total > 0;
           const artPct = pct(art.committed, art.total);
-          const artStatus = getConvergenceStatus(artPct, stage);
-          const sc = STATUS_COLOUR[artStatus];
+          const artStatus = hasData ? getConvergenceStatus(artPct, stage) : 'success';
+          const sc = hasData ? STATUS_COLOUR[artStatus] : null;
 
           return (
             <article
               key={art.artId}
-              className={`flex-1 min-w-[200px] rounded border border-border bg-surface p-3 border-t-[3px] ${sc.border}`}
+              className={`flex-1 min-w-[200px] rounded border border-border bg-surface p-3 border-t-[3px] ${
+                hasData ? sc!.border : 'border-neutral'
+              }`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <div>
@@ -344,26 +390,40 @@ export function LiveDashboard({ initialData }: Props) {
                     <p className="text-xs text-textMuted">{art.name}</p>
                   )}
                 </div>
-                <p className={`text-2xl font-medium ${sc.text}`}>{artPct}%</p>
+                {hasData ? (
+                  <p className={`text-2xl font-medium ${sc!.text}`}>{artPct}%</p>
+                ) : (
+                  <p className="text-2xl font-medium text-textMuted">—</p>
+                )}
               </div>
               <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className={`h-full rounded-full ${
-                    artStatus === 'success'
-                      ? 'bg-success'
-                      : artStatus === 'warning'
-                        ? 'bg-warning'
-                        : 'bg-danger'
-                  }`}
-                  style={{ width: `${Math.min(100, artPct)}%` }}
-                />
+                {hasData && (
+                  <div
+                    className={`h-full rounded-full ${
+                      artStatus === 'success'
+                        ? 'bg-success'
+                        : artStatus === 'warning'
+                          ? 'bg-warning'
+                          : 'bg-danger'
+                    }`}
+                    style={{ width: `${Math.min(100, artPct)}%` }}
+                  />
+                )}
               </div>
               <p className="mt-2 text-xs text-textMuted">
-                {art.committed}/{art.total} features · {art.teamCount} teams
+                {hasData
+                  ? `${art.committed}/${art.total} features · ${art.teamCount} teams`
+                  : 'No features imported yet'}
               </p>
-              <span className={`mt-1 inline-block ${statusPillClasses(artStatus)}`}>
-                {statusLabel(artStatus)}
-              </span>
+              {hasData ? (
+                <span className={`mt-1 inline-block ${statusPillClasses(artStatus)}`}>
+                  {getConvergenceLabel(artStatus, artPct, stage)}
+                </span>
+              ) : (
+                <span className="mt-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-textMuted">
+                  No data
+                </span>
+              )}
             </article>
           );
         })}
@@ -371,6 +431,9 @@ export function LiveDashboard({ initialData }: Props) {
           <p className="text-sm text-textMuted">No ART data for this PI.</p>
         )}
       </section>
+
+      {/* Zone separator */}
+      <div className="border-t border-border opacity-50" />
 
       {/* ── 4. Metrics strip ────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -408,12 +471,16 @@ export function LiveDashboard({ initialData }: Props) {
         {/* Data freshness */}
         <MetricCard
           label="Data freshness"
-          value={freshnessLabel(data.lastImportCreatedAt)}
-          sub="Last successful import"
-          status={importStatus}
-          reading={getContextualReading('freshness', importStatus)}
+          value={freshnessCard.value}
+          sub={freshnessCard.sub}
+          status={freshnessCard.status}
+          neutral={freshnessCard.isNeutral}
+          reading={freshnessCard.reading}
         />
       </section>
+
+      {/* Zone separator */}
+      <div className="border-t border-border opacity-50" />
 
       {/* ── 5. Two-column: Sprint load + Dependency health ──────────── */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-5">
@@ -486,30 +553,39 @@ export function LiveDashboard({ initialData }: Props) {
                 colour: 'text-textMuted',
               };
               return (
-                <li key={row.status} className="flex items-center gap-2 text-sm">
-                  <span
-                    aria-hidden="true"
-                    className={`inline-block w-4 text-center text-base ${meta.colour}`}
-                  >
-                    {meta.shape}
-                  </span>
-                  <span className="sr-only">{meta.label}</span>
-                  <span className="flex-1 text-textPrimary">{meta.label}</span>
-                  <span className="font-medium text-textPrimary">{row.count}</span>
-                  {row.highCriticalityCount > 0 && (
-                    <span className="rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-700">
-                      {row.highCriticalityCount} high
+                <li key={row.status} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className={`inline-block w-4 text-center text-base ${meta.colour}`}
+                    >
+                      {meta.shape}
                     </span>
-                  )}
+                    <span className="sr-only">{meta.label}</span>
+                    <span className="text-textPrimary">{meta.label}</span>
+                  </div>
+                  <span className="min-w-[2rem] text-right font-medium text-textPrimary">
+                    {row.count}
+                  </span>
                 </li>
               );
             })}
           </ul>
-          <p className="mt-3 text-xs text-textMuted">
+          {highCritDeps.count > 0 && (
+            <p className="mt-2 text-xs text-red-600">
+              {highCritDeps.count} high-criticality {highCritDeps.count === 1 ? 'dependency requires' : 'dependencies require'} attention.
+            </p>
+          )}
+          <p className="mt-2 text-xs text-textMuted">
             {getContextualReading('dependencies', depHealthOverall)}
           </p>
         </article>
       </section>
+
+      {/* Concept section label + separator */}
+      <div className="border-t border-border pt-1">
+        <p className="text-center text-xs text-textMuted">Future capabilities</p>
+      </div>
 
       {/* ── 6. Concept tiles ────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -608,23 +684,26 @@ function MetricCard({
   value,
   sub,
   status,
+  neutral = false,
   reading,
 }: {
   label: string;
   value: number | string;
   sub: string;
   status: ThresholdStatus;
+  neutral?: boolean;
   reading: string;
 }) {
   const sc = STATUS_COLOUR[status];
+  const topBorderClass = neutral ? 'border-border' : sc.border;
   return (
     <article
-      className={`rounded border border-border bg-surface p-3 border-t-[3px] ${sc.border}`}
+      className={`rounded border border-border bg-surface p-3 border-t-[3px] ${topBorderClass}`}
     >
       <p className="text-xs text-textMuted">{label}</p>
       <p className="mt-1 text-2xl font-medium text-textPrimary">{value}</p>
       <p className="text-xs text-textMuted">{sub}</p>
-      <p className="mt-2 text-xs text-textMuted">{reading}</p>
+      {reading && <p className="mt-2 text-xs text-textMuted">{reading}</p>}
     </article>
   );
 }
