@@ -20,6 +20,7 @@ import { PLANNING_STAGES } from '@/lib/planning/stages';
 import {
   convergenceThresholds,
   getConvergenceStatus,
+  getConvergenceLabel,
   getParkingLotStatus,
   type ThresholdStatus,
 } from '@/data/dashboardThresholds';
@@ -38,13 +39,6 @@ const STATUS_COLOUR: Record<ThresholdStatus, { bg: string; text: string; border:
 function statusPillClasses(status: ThresholdStatus): string {
   const s = STATUS_COLOUR[status];
   return `${s.bg} ${s.text} rounded-full px-2 py-0.5 text-xs font-medium`;
-}
-
-/** Directional convergence label — never generic "Watch". */
-function getConvergenceLabel(status: ThresholdStatus, pct: number, stage: number): string {
-  if (status === 'success') return 'On track';
-  if (stage === 1 && pct > convergenceThresholds[1].successRange[1]) return 'Above target';
-  return 'Behind target';
 }
 
 function pct(n: number, d: number): number {
@@ -341,7 +335,7 @@ export function LiveDashboard({ initialData }: Props) {
               Stage {stage} target: {convergenceThresholds[stage]?.label ?? '—'}
             </p>
             <span className={`mt-1 inline-block ${statusPillClasses(overallStatus)}`}>
-              {getConvergenceLabel(overallStatus, overallPct, stage)}
+              {getConvergenceLabel(overallPct, stage)}
             </span>
             <p className="mt-2 text-xs text-textMuted">
               {getContextualReading('convergence', overallStatus, String(overallPct), String(stage))}
@@ -417,7 +411,7 @@ export function LiveDashboard({ initialData }: Props) {
               </p>
               {hasData ? (
                 <span className={`mt-1 inline-block ${statusPillClasses(artStatus)}`}>
-                  {getConvergenceLabel(artStatus, artPct, stage)}
+                  {getConvergenceLabel(artPct, stage)}
                 </span>
               ) : (
                 <span className="mt-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-textMuted">

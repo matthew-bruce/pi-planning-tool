@@ -8,14 +8,21 @@ describe('getContextualReading', () => {
     expect(msg).toContain('Stage 3');
   });
 
-  it('returns convergence warning message — early stage advice', () => {
+  it('returns convergence warning message — below band, early stage', () => {
     const msg = getContextualReading('convergence', 'warning', '30', '2');
     expect(msg).toContain('recoverable');
   });
 
-  it('returns convergence warning message — late stage advice', () => {
+  it('returns convergence warning message — below band, late stage', () => {
     const msg = getContextualReading('convergence', 'warning', '70', '4');
     expect(msg).toContain('Sorting Frame');
+  });
+
+  it('returns convergence warning message — above band', () => {
+    // 92% at stage 3 (band 70–85) is above target
+    const msg = getContextualReading('convergence', 'warning', '92', '3');
+    expect(msg).toContain('Ahead of target');
+    expect(msg).toContain('prematurely');
   });
 
   it('returns convergence danger message — early stage', () => {

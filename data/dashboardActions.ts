@@ -8,10 +8,15 @@ export const dashboardActions: Record<string, ActionLookup> = {
       const label = convergenceThresholds[Number(stage)]?.label ?? ''
       return `On track for Stage ${stage}. Expected ${label}.`
     },
-    warning: (_, stage) =>
-      Number(stage) <= 3
+    warning: (pct, stage) => {
+      const t = convergenceThresholds[Number(stage)]
+      if (t && Number(pct) > t.successRange[1]) {
+        return "Ahead of target for this stage — check teams aren't committing prematurely before business context is complete."
+      }
+      return Number(stage) <= 3
         ? 'Behind target — recoverable. Listen for teams waiting on a clarification.'
-        : 'Lagging. Surface the bottom 3 teams by convergence on the Sorting Frame.',
+        : 'Lagging. Surface the bottom 3 teams by convergence on the Sorting Frame.'
+    },
     danger: (_, stage) =>
       Number(stage) <= 3
         ? 'Significantly behind. Consider a 10-minute pause — ask every team to commit one feature, even tentatively.'

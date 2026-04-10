@@ -26,9 +26,18 @@ export const parkingLotThresholds: Record<number, { warningCount: number; danger
 export function getConvergenceStatus(pct: number, stage: number): ThresholdStatus {
   const t = convergenceThresholds[stage] ?? convergenceThresholds[3]
   if (pct >= t.successRange[0] && pct <= t.successRange[1]) return 'success'
-  if (stage === 1 && pct > 10) return 'warning'  // early over-committing
+  if (pct > t.successRange[1]) return 'warning'  // above band — over-committing / ahead
   const gap = t.successRange[0] - pct
   return gap > 15 ? 'danger' : 'warning'
+}
+
+/** Directional label for convergence status pills. */
+export function getConvergenceLabel(pct: number, stage: number): string {
+  const t = convergenceThresholds[stage] ?? convergenceThresholds[3]
+  if (pct >= t.successRange[0] && pct <= t.successRange[1]) return 'On track'
+  if (pct > t.successRange[1]) return 'Above target'
+  const gap = t.successRange[0] - pct
+  return gap > 15 ? 'Well behind target' : 'Behind target'
 }
 
 export function getParkingLotStatus(count: number, stage: number): ThresholdStatus {

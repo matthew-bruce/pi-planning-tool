@@ -3,6 +3,7 @@ import {
   convergenceThresholds,
   parkingLotThresholds,
   getConvergenceStatus,
+  getConvergenceLabel,
   getParkingLotStatus,
 } from '../dashboardThresholds';
 
@@ -29,9 +30,16 @@ describe('getConvergenceStatus', () => {
     expect(getConvergenceStatus(100, 6)).toBe('success');
   });
 
-  it('returns warning for stage 1 over-commitment', () => {
+  it('returns warning when above band (over-committing)', () => {
+    // Stage 1: band is 0–10, anything above 10 is over-committing
     expect(getConvergenceStatus(15, 1)).toBe('warning');
     expect(getConvergenceStatus(50, 1)).toBe('warning');
+    // Stage 2: band is 40–70, 75 is above
+    expect(getConvergenceStatus(75, 2)).toBe('warning');
+    // Stage 3: band is 70–85, 92 is above
+    expect(getConvergenceStatus(92, 3)).toBe('warning');
+    // Stage 4: band is 85–95, 98 is above
+    expect(getConvergenceStatus(98, 4)).toBe('warning');
   });
 
   it('returns warning when slightly below range', () => {
@@ -48,6 +56,34 @@ describe('getConvergenceStatus', () => {
   it('falls back to stage 3 thresholds for unknown stage', () => {
     expect(getConvergenceStatus(75, 99)).toBe('success');
     expect(getConvergenceStatus(40, 99)).toBe('danger');
+  });
+});
+
+describe('getConvergenceLabel', () => {
+  it('returns "On track" when within band', () => {
+    expect(getConvergenceLabel(5, 1)).toBe('On track');
+    expect(getConvergenceLabel(50, 2)).toBe('On track');
+    expect(getConvergenceLabel(80, 3)).toBe('On track');
+    expect(getConvergenceLabel(90, 4)).toBe('On track');
+    expect(getConvergenceLabel(100, 6)).toBe('On track');
+  });
+
+  it('returns "Above target" when above band', () => {
+    expect(getConvergenceLabel(15, 1)).toBe('Above target');
+    expect(getConvergenceLabel(75, 2)).toBe('Above target');
+    expect(getConvergenceLabel(92, 3)).toBe('Above target');
+    expect(getConvergenceLabel(98, 4)).toBe('Above target');
+  });
+
+  it('returns "Behind target" when slightly below band', () => {
+    expect(getConvergenceLabel(35, 2)).toBe('Behind target');
+    expect(getConvergenceLabel(60, 3)).toBe('Behind target');
+  });
+
+  it('returns "Well behind target" when far below band (gap > 15)', () => {
+    expect(getConvergenceLabel(20, 2)).toBe('Well behind target');
+    expect(getConvergenceLabel(40, 3)).toBe('Well behind target');
+    expect(getConvergenceLabel(60, 4)).toBe('Well behind target');
   });
 });
 
