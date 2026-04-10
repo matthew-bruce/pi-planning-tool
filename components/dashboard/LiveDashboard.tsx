@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { setProgramIncrementStage } from '@/app/admin/actions';
+import type { PlanningStageId } from '@/lib/planning/stages';
 import {
   BarChart,
   Bar,
@@ -127,8 +129,38 @@ const DEP_STATUS_META: Record<string, { shape: string; label: string; colour: st
 export function LiveDashboard({ initialData }: Props) {
   const router = useRouter();
   const data = initialData;
-  const stage = data.cycle?.current_stage ?? 1;
+  const rawStage = data.cycle?.current_stage ?? 1;
   const piId = data.cycle?.id;
+
+  // Sync mode — determines whether pipeline dots are interactive
+  const [syncMode, setSyncMode] = useState<'read_only' | 'read_write'>('read_only');
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'sync_mode')
+      .maybeSingle()
+      .then(({ data: row }: { data: { value: string } | null }) => {
+        if (row?.value === 'read_write') setSyncMode('read_write');
+      });
+  }, []);
+
+  // Optimistic stage control — dots flash immediately, rolls back if server rejects
+  const [isPending, startTransition] = useTransition();
+  const [optimisticStage, setOptimisticStage] = useOptimistic(rawStage);
+  const stage = optimisticStage;
+
+  const handleStageClick = (nextId: PlanningStageId) => {
+    if (!piId || syncMode !== 'read_write' || nextId === stage) return;
+    startTransition(async () => {
+      setOptimisticStage(nextId);
+      await setProgramIncrementStage(piId, nextId);
+    });
+  };
+
+  const isInteractive = syncMode === 'read_write' && !!piId;
 
   // Realtime subscription + polling fallback
   useEffect(() => {
@@ -258,6 +290,7 @@ export function LiveDashboard({ initialData }: Props) {
               const isComplete = s.id < stage;
               const isActive = s.id === stage;
               const isFuture = s.id > stage;
+              const canClick = isInteractive && !isPending && s.id !== stage;
 
               return (
                 <div key={s.id} className="flex items-center">
@@ -269,21 +302,27 @@ export function LiveDashboard({ initialData }: Props) {
                     />
                   )}
                   <div className="flex flex-col items-center">
-                    <div
-                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
+                    <button
+                      type="button"
+                      disabled={!canClick}
+                      onClick={() => canClick && handleStageClick(s.id)}
+                      className={[
+                        'flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-shadow',
                         isComplete
                           ? 'bg-royalRed text-white'
                           : isActive
                             ? 'bg-royalRed text-white ring-4 ring-red-200 animate-pulse'
-                            : 'border-2 border-surfaceSubtle bg-surfaceSubtle text-textMuted'
-                      }`}
+                            : 'border-2 border-surfaceSubtle bg-surfaceSubtle text-textMuted',
+                        canClick
+                          ? 'cursor-pointer hover:ring-2 hover:ring-royalRed/30'
+                          : 'cursor-default',
+                      ].join(' ')}
                       aria-label={`Stage ${s.id}: ${s.shortLabel}, ${
                         isComplete ? 'complete' : isActive ? 'active' : 'upcoming'
-                      }`}
-                      role="img"
+                      }${canClick ? '. Click to set as current stage.' : ''}`}
                     >
                       {s.id}
-                    </div>
+                    </button>
                     <span
                       className={`mt-1 hidden text-[11px] sm:block ${
                         isFuture ? 'text-textMuted' : 'text-textPrimary'

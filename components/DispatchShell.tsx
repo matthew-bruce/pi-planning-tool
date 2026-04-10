@@ -22,7 +22,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { ActivityFeedPanel } from '@/components/ActivityFeedPanel';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { PlanningStagePill } from '@/components/planning/PlanningStagePill';
+import { StageIndicator } from '@/components/ui/StageIndicator';
 
 const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 52;
@@ -102,6 +102,18 @@ export function DispatchShell({
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem('dispatch_nav_collapsed', String(next));
+  };
+
+  const toggleSyncMode = () => {
+    const next = syncMode === 'read_write' ? 'read_only' : 'read_write';
+    setSyncMode(next);
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      // eslint-disable-next-line
+      (supabase.from('app_settings') as any)
+        .upsert({ key: 'sync_mode', value: next }, { onConflict: 'key' })
+        .then(() => {});
+    }
   };
 
   useEffect(() => {
@@ -218,34 +230,48 @@ export function DispatchShell({
           })}
         </nav>
 
-        {/* Sync mode indicator — display-only, above config section */}
-        <div className="shrink-0 border-t border-gray-100 pt-3">
-          {collapsed ? (
-            <div
-              title={syncMode === 'read_write' ? 'Read + Write mode' : 'Read Only mode'}
-              className="mb-1 flex justify-center text-textMuted"
-            >
-              {syncMode === 'read_write' ? <LockOpen size={14} /> : <Lock size={14} />}
-            </div>
-          ) : (
-            <div className="mb-2 flex items-center gap-2 px-1">
-              {syncMode === 'read_write' ? (
-                <LockOpen size={13} className="shrink-0 text-textMuted" />
-              ) : (
-                <Lock size={13} className="shrink-0 text-textMuted" />
-              )}
-              <span className="text-xs text-textMuted">
-                {syncMode === 'read_write' ? 'Read + Write' : 'Read Only'}
-              </span>
-            </div>
-          )}
-        </div>
-
         {/* Config items — pinned to bottom */}
-        <div className="mt-auto shrink-0 pt-3">
+        <div className="mt-auto shrink-0 border-t border-gray-100 pt-3">
           {!collapsed && (
             <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
               Configuration
+            </div>
+          )}
+
+          {/* Sync Mode */}
+          {collapsed ? (
+            <button
+              onClick={toggleSyncMode}
+              title={syncMode === 'read_write' ? 'Sync: Read + Write' : 'Sync: Read Only'}
+              className="mb-1 flex w-full items-center justify-center rounded py-2 transition-colors hover:bg-gray-100"
+              style={{ color: syncMode === 'read_write' ? '#16a34a' : '#9ca3af' }}
+            >
+              {syncMode === 'read_write' ? <LockOpen size={16} className="shrink-0" /> : <Lock size={16} className="shrink-0" />}
+            </button>
+          ) : (
+            <div className="mb-2 flex items-center justify-between rounded border border-gray-200 px-3 py-2">
+              <div className="flex items-center gap-2">
+                {syncMode === 'read_write' ? (
+                  <LockOpen size={16} className="shrink-0 text-gray-500" />
+                ) : (
+                  <Lock size={16} className="shrink-0 text-gray-500" />
+                )}
+                <div>
+                  <div className="text-sm text-gray-700">Sync Mode</div>
+                  {syncMode === 'read_write' && <div className="text-xs text-green-700">Read + Write</div>}
+                </div>
+              </div>
+              <button
+                role="switch"
+                aria-checked={syncMode === 'read_write'}
+                onClick={toggleSyncMode}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus:outline-none ${syncMode === 'read_write' ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <span
+                  className="pointer-events-none mt-0.5 inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: syncMode === 'read_write' ? 'translateX(1.125rem)' : 'translateX(0.125rem)' }}
+                />
+              </button>
             </div>
           )}
 
@@ -391,9 +417,9 @@ export function DispatchShell({
                 )}
               </div>
 
-              {/* Planning Stage pill — right-aligned, visually distinct from ART pills */}
+              {/* Planning Stage — passive indicator (interactive control lives on Dashboard only) */}
               <div className="ml-auto">
-                <PlanningStagePill cycleId={cycleId} currentStage={currentStage} />
+                <StageIndicator stage={currentStage} />
               </div>
             </div>
           </header>
